@@ -1,0 +1,85 @@
+<div class="kitchen-container">
+  <h1>🍳 Pedidos en Cocina</h1>
+
+  <div class="orders-columns">
+    <!-- COLUMNA 1: PENDIENTE -->
+    <div class="column">
+      <h2 class="column-title pending-title">
+        <span class="icon">⏳</span>
+        Pendientes ({{ pendingOrders.length }})
+      </h2>
+      
+      <div class="orders-list">
+        <div *ngFor="let order of pendingOrders" class="order-card pending-card">
+          <div class="order-header">
+            <h3>Mesa {{ order.tableNumber }}</h3>
+            <span class="time">{{ order.createdAt | date:'HH:mm' }}</span>
+          </div>
+
+          <div class="order-details">
+            <p><strong>Tipo:</strong> {{ order.mealType }}</p>
+            <p><strong>Total:</strong> S/. {{ order.total.toFixed(2) }}</p>
+          </div>
+
+          <div class="order-items">
+            <h4>Productos:</h4>
+            <ul>
+              <li *ngFor="let item of order.items">
+                <span class="qty">{{ item.quantity }}x</span>
+                <span class="name">{{ item.product?.name || 'Producto' }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <button (click)="markAsReady(order.id)" class="btn-ready">
+            ✓ Marcar como Listo
+          </button>
+        </div>
+
+        <div *ngIf="pendingOrders.length === 0" class="empty-state">
+          <p>Sin pedidos pendientes 😊</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUMNA 2: LISTO -->
+    <div class="column">
+      <h2 class="column-title ready-title">
+        <span class="icon">✓</span>
+        Listos ({{ readyOrders.length }})
+      </h2>
+
+      <div class="orders-list">
+        <div *ngFor="let order of readyOrders" class="order-card ready-card">
+          <div class="order-header">
+            <h3>Mesa {{ order.tableNumber }}</h3>
+            <span class="time">{{ order.createdAt | date:'HH:mm' }}</span>
+          </div>
+
+          <div class="order-details">
+            <p><strong>Tipo:</strong> {{ order.mealType }}</p>
+            <p><strong>Total:</strong> S/. {{ order.total.toFixed(2) }}</p>
+          </div>
+
+          <div class="order-items">
+            <h4>Productos:</h4>
+            <ul>
+              <li *ngFor="let item of order.items">
+                <span class="qty">{{ item.quantity }}x</span>
+                <span class="name">{{ item.product?.name || 'Producto' }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="status-badge">
+            Listo para entregar
+          </div>
+        </div>
+
+        <div *ngIf="readyOrders.length === 0" class="empty-state">
+          <p>Sin pedidos listos</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
