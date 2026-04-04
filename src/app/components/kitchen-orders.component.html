@@ -1,6 +1,13 @@
 <div class="kitchen-container">
   <h1>🍳 Pedidos en Cocina</h1>
 
+  <!-- CALENDARIO -->
+  <div class="calendar-section">
+    <label for="datePicker">Selecciona una fecha:</label>
+    <input type="date" id="datePicker" [(ngModel)]="selectedDate" (change)="filterByDate()" class="date-input" />
+    <span class="date-info">{{ selectedDate | date:'dd/MM/yyyy' }}</span>
+  </div>
+
   <div class="orders-columns">
     <!-- COLUMNA 1: PENDIENTE -->
     <div class="column">

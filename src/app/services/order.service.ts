@@ -132,4 +132,20 @@ export class OrderService {
       });
     });
   }
+
+  getOrdersByDate(date: Date): Order[] {
+    const selectedDate = new Date(date).toDateString();
+    return this.orders$.value.filter(order => {
+      const orderDate = new Date(order.createdAt).toDateString();
+      return orderDate === selectedDate;
+    });
+  }
+
+  getTodayOrders(): Order[] {
+    const today = new Date().toDateString();
+    return this.orders$.value.filter(order => {
+      const orderDate = new Date(order.createdAt).toDateString();
+      return orderDate === today;
+    });
+  }
 }
