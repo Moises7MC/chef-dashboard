@@ -8,12 +8,15 @@
         <span class="icon">⏳</span>
         Pendientes ({{ pendingOrders.length }})
       </h2>
-      
+
       <div class="orders-list">
         <div *ngFor="let order of pendingOrders" class="order-card pending-card">
           <div class="order-header">
             <h3>Mesa {{ order.tableNumber }}</h3>
-            <span class="time">{{ order.createdAt | date:'HH:mm' }}</span>
+            <div class="order-datetime">
+              <span class="date">{{ order.createdAt | date:'dd/MM/yyyy' }}</span>
+              <span class="time">{{ order.createdAt | date:'HH:mm' }}</span>
+            </div>
           </div>
 
           <div class="order-details">
@@ -53,7 +56,10 @@
         <div *ngFor="let order of readyOrders" class="order-card ready-card">
           <div class="order-header">
             <h3>Mesa {{ order.tableNumber }}</h3>
-            <span class="time">{{ order.createdAt | date:'HH:mm' }}</span>
+            <div class="order-datetime">
+              <span class="date">{{ order.createdAt | date:'dd/MM/yyyy' }}</span>
+              <span class="time">{{ order.createdAt | date:'HH:mm' }}</span>
+            </div>
           </div>
 
           <div class="order-details">
