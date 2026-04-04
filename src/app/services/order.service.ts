@@ -134,18 +134,22 @@ export class OrderService {
   }
 
   getOrdersByDate(date: Date): Order[] {
-    const selectedDate = new Date(date).toDateString();
+    // Convierte a formato YYYY-MM-DD para comparar solo la fecha
+    const selectedDateStr = date.toISOString().split('T')[0];
+
     return this.orders$.value.filter(order => {
-      const orderDate = new Date(order.createdAt).toDateString();
-      return orderDate === selectedDate;
+      // Convierte la fecha del pedido también a YYYY-MM-DD
+      const orderDateStr = new Date(order.createdAt).toISOString().split('T')[0];
+      console.log('Comparando:', orderDateStr, 'con', selectedDateStr);
+      return orderDateStr === selectedDateStr;
     });
   }
 
   getTodayOrders(): Order[] {
-    const today = new Date().toDateString();
+    const todayStr = new Date().toISOString().split('T')[0];
     return this.orders$.value.filter(order => {
-      const orderDate = new Date(order.createdAt).toDateString();
-      return orderDate === today;
+      const orderDateStr = new Date(order.createdAt).toISOString().split('T')[0];
+      return orderDateStr === todayStr;
     });
   }
 }
