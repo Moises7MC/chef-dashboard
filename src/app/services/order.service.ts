@@ -3,6 +3,8 @@ import * as signalR from '@microsoft/signalr';
 import { BehaviorSubject } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 
+const API_URL = 'https://app-restaurant-api.onrender.com';
+
 export interface Order {
   id: number;
   tableNumber: number;
@@ -35,8 +37,10 @@ export class OrderService {
   }
 
   private initializeConnection(): void {
+    console.log('Inicializando conexión a:', `${API_URL}/hubs/orders`);
+    
     this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl('https://app-restaurant-api.onrender.com/hubs/orders', {
+      .withUrl(`${API_URL}/hubs/orders`, {
         skipNegotiation: true,
         transport: signalR.HttpTransportType.WebSockets
       })
@@ -66,23 +70,24 @@ export class OrderService {
     });
   }
 
-  // ← AGREGA ESTO
- loadOrders(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    this.http.get<Order[]>('https://app-restaurant-api.onrender.com/api/order')
-      .subscribe({
-        next: (orders) => {
-          console.log('Órdenes cargadas:', orders);
-          this.orders$.next(orders);
-          resolve();
-        },
-        error: (err) => {
-          console.error('Error cargando órdenes:', err);
-          reject(err);
-        }
-      });
-  });
-}
+  loadOrders(): Promise<void> {
+    console.log('Cargando órdenes desde:', `${API_URL}/api/order`);
+    
+    return new Promise((resolve, reject) => {
+      this.http.get<Order[]>(`${API_URL}/api/order`)
+        .subscribe({
+          next: (orders) => {
+            console.log('✓ Órdenes cargadas:', orders);
+            this.orders$.next(orders);
+            resolve();
+          },
+          error: (err) => {
+            console.error('✗ Error cargando órdenes:', err);
+            reject(err);
+          }
+        });
+    });
+  }
 
   connect(): Promise<void> {
     if (this.hubConnection?.state === signalR.HubConnectionState.Connected) {
