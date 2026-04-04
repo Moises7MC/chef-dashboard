@@ -13,7 +13,7 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
   pendingOrders: Order[] = [];
   readyOrders: Order[] = [];
 
-  constructor(private orderService: OrderService) {}
+  constructor(private orderService: OrderService) { }
 
   ngOnInit(): void {
     // Cargar órdenes existentes
@@ -43,6 +43,18 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
   }
 
   markAsReady(orderId: number): void {
-    this.orderService.markOrderAsReady(orderId);
+    console.log('Marcando como listo:', orderId);
+
+    // Primero actualiza en BD
+    this.orderService.updateOrderStatus(orderId, 'Listo').then(() => {
+      console.log('✓ Cambio guardado en BD');
+
+      // Luego invoca SignalR para notificar a otros
+      this.orderService.markOrderAsReady(orderId).catch(err => {
+        console.error('Error en SignalR:', err);
+      });
+    }).catch(err => {
+      console.error('✗ Error:', err);
+    });
   }
 }

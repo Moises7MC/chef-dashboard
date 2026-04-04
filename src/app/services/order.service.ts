@@ -38,7 +38,7 @@ export class OrderService {
 
   private initializeConnection(): void {
     console.log('Inicializando conexión a:', `${API_URL}/hubs/orders`);
-    
+
     this.hubConnection = new signalR.HubConnectionBuilder()
       .withUrl(`${API_URL}/hubs/orders`, {
         skipNegotiation: true,
@@ -72,7 +72,7 @@ export class OrderService {
 
   loadOrders(): Promise<void> {
     console.log('Cargando órdenes desde:', `${API_URL}/api/order`);
-    
+
     return new Promise((resolve, reject) => {
       this.http.get<Order[]>(`${API_URL}/api/order`)
         .subscribe({
@@ -110,5 +110,26 @@ export class OrderService {
 
   getOrders(): Order[] {
     return this.orders$.value;
+  }
+
+  updateOrderStatus(orderId: number, status: string): Promise<void> {
+    console.log('Actualizando orden', orderId, 'a estado:', status);
+
+    return new Promise((resolve, reject) => {
+      this.http.put<void>(
+        `${API_URL}/api/order/${orderId}/status`,
+        JSON.stringify(status),
+        { headers: { 'Content-Type': 'application/json' } }
+      ).subscribe({
+        next: () => {
+          console.log('✓ Orden actualizada en BD');
+          resolve();
+        },
+        error: (err) => {
+          console.error('✗ Error actualizando orden:', err);
+          reject(err);
+        }
+      });
+    });
   }
 }
