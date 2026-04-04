@@ -36,7 +36,7 @@ export class OrderService {
 
   private initializeConnection(): void {
     this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl('http://localhost:5245/hubs/orders', {
+      .withUrl('https://app-restaurant-api.onrender.com/hubs/orders', {
         skipNegotiation: true,
         transport: signalR.HttpTransportType.WebSockets
       })
@@ -69,7 +69,7 @@ export class OrderService {
   // ← AGREGA ESTO
  loadOrders(): Promise<void> {
   return new Promise((resolve, reject) => {
-    this.http.get<Order[]>('http://localhost:5245/api/order')
+    this.http.get<Order[]>('https://app-restaurant-api.onrender.com/api/order')
       .subscribe({
         next: (orders) => {
           console.log('Órdenes cargadas:', orders);
