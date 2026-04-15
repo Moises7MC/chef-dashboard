@@ -42,34 +42,33 @@ export class OrderService {
   private initializeConnection(): void {
     console.log('Inicializando conexión a:', `${API_URL}/hubs/orders`);
 
+    // this.hubConnection = new signalR.HubConnectionBuilder()
+    //   .withUrl(`${API_URL}/hubs/orders`, {
+    //     skipNegotiation: true,
+    //     transport: signalR.HttpTransportType.WebSockets
+    //   })
+    //   .withAutomaticReconnect()
+    //   .build();
+
     this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl(`${API_URL}/hubs/orders`, {
-        skipNegotiation: true,
-        transport: signalR.HttpTransportType.WebSockets
-      })
+      .withUrl(`${API_URL}/hubs/orders`)
       .withAutomaticReconnect()
       .build();
 
     this.hubConnection.on('NuevoPedido', (order: Order) => {
-      const currentOrders = this.orders$.value;
-      this.orders$.next([...currentOrders, order]);
       console.log('Nuevo pedido recibido:', order);
+      // En vez de agregar al array, recargar todo del backend
+      this.loadOrders();
     });
 
     this.hubConnection.on('PedidoListo', (orderId: number) => {
-      const currentOrders = this.orders$.value;
-      const updated = currentOrders.map(order =>
-        order.id === orderId ? { ...order, status: 'Listo' } : order
-      );
-      this.orders$.next(updated);
+      console.log('Pedido listo:', orderId);
+      this.loadOrders();
     });
 
-    this.hubConnection.on('ActualizacionPedido', (data: { orderId: number; status: string }) => {
-      const currentOrders = this.orders$.value;
-      const updated = currentOrders.map(order =>
-        order.id === data.orderId ? { ...order, status: data.status } : order
-      );
-      this.orders$.next(updated);
+    this.hubConnection.on('ActualizacionPedido', (data: any) => {
+      console.log('Actualización pedido:', data);
+      this.loadOrders();
     });
   }
 

@@ -26,13 +26,10 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     { key: 'Cancelado', label: 'Cancelado' },
   ];
 
-  selectedOrderForHistory: any = null;
-  orderHistory: any[] = [];
-  showHistoryModal: boolean = false;
-
-  constructor(private orderService: OrderService) {}
+  constructor(private orderService: OrderService) { }
 
   ngOnInit(): void {
+    // Carga inicial
     this.orderService.loadOrders().then(() => {
       this.applyFilters();
     });
@@ -41,9 +38,29 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
       this.orderService.joinKitchenGroup();
     });
 
+    // Cuando lleguen nuevos datos via SignalR, solo aplica filtros
+    // SIN volver a cargar del backend
     this.orderService.orders$.subscribe(() => {
-      this.applyFilters();
+      this.applyFiltersLocal(); // ← método nuevo sin HTTP
     });
+  }
+
+  // Filtra sobre los datos ya cargados en memoria
+  applyFiltersLocal(): void {
+    const date = new Date(this.selectedDate);
+    let orders = this.orderService.getOrdersByDate(date);
+
+    if (this.activeFilter !== 'all') {
+      orders = orders.filter(o => o.status === this.activeFilter);
+    }
+
+    if (this.searchQuery.trim()) {
+      const q = this.searchQuery.toLowerCase();
+      orders = orders.filter(o => o.tableNumber.toString().includes(q));
+    }
+
+    this.allOrders = this.orderService.getOrdersByDate(date);
+    this.filteredOrders = orders;
   }
 
   ngOnDestroy(): void {
@@ -52,22 +69,7 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
 
   applyFilters(): void {
     this.orderService.loadOrders().then(() => {
-      const date = new Date(this.selectedDate);
-      let orders = this.orderService.getOrdersByDate(date);
-
-      if (this.activeFilter !== 'all') {
-        orders = orders.filter(o => o.status === this.activeFilter);
-      }
-
-      if (this.searchQuery.trim()) {
-        const q = this.searchQuery.toLowerCase();
-        orders = orders.filter(o =>
-          o.tableNumber.toString().includes(q)
-        );
-      }
-
-      this.allOrders = this.orderService.getOrdersByDate(date);
-      this.filteredOrders = orders;
+      this.applyFiltersLocal();
     });
   }
 
@@ -119,33 +121,4 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
       alert('Error al descargar comprobante');
     });
   }
-
-  openHistoryModal(order: any): void {
-    alert('Abriendo histórico para orden: ' + order.id);
-
-    this.selectedOrderForHistory = order;
-    this.showHistoryModal = true;
-
-    this.orderService.getOrderHistory(order.id).then((history) => {
-      alert('Histórico cargado: ' + JSON.stringify(history));
-
-      this.orderHistory = history.map(entry => ({
-        ...entry,
-        itemsParsed: typeof entry.itemsAdded === 'string'
-          ? JSON.parse(entry.itemsAdded)
-          : entry.itemsAdded
-      }));
-      console.log('Histórico parseado:', this.orderHistory);
-    }).catch(err => {
-      alert('Error cargando histórico: ' + err);
-      console.error('Error:', err);
-    });
-  }
-
-  closeHistoryModal(): void {
-    this.showHistoryModal = false;
-    this.selectedOrderForHistory = null;
-    this.orderHistory = [];
-  }
-
 }

@@ -69,10 +69,6 @@
       </div>
 
       <div class="card-actions">
-        <button class="btn btn-info" (click)="openHistoryModal(order)">
-          📋 Ver detalles
-        </button>
-
         <button *ngIf="order.status === 'Enviado a cocina' || order.status === 'Pendiente'" class="btn btn-green"
           (click)="markAsReady(order.id)">
           ✓ Marcar como listo
@@ -96,52 +92,4 @@
       Sin pedidos para mostrar
     </div>
   </div>
-
-  <!-- MODAL HISTÓRICO -->
-  <div *ngIf="showHistoryModal" class="modal-overlay" (click)="closeHistoryModal()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-
-      <!-- Header -->
-      <div class="modal-header">
-        <h2>Mesa {{ selectedOrderForHistory?.tableNumber }} - {{ selectedOrderForHistory?.createdAt | date:'dd/MM/yyyy HH:mm' }}</h2>
-        <button class="modal-close" (click)="closeHistoryModal()">✕</button>
-      </div>
-
-      <!-- Timeline -->
-      <div class="modal-body">
-        <div class="timeline">
-          <div *ngFor="let entry of orderHistory; let i = index" class="timeline-item">
-
-            <!-- Punto en la línea -->
-            <div class="timeline-dot"></div>
-
-            <!-- Contenido -->
-            <div class="timeline-content">
-              <div class="timeline-time">
-                {{ entry.createdAt | date:'HH:mm:ss' }}
-              </div>
-              <div class="timeline-action">
-                {{ entry.action === 'Inicial' ? '📍 Pedido Inicial' : '➕ Items Agregados' }}
-              </div>
-
-              <!-- Items -->
-              <div class="timeline-items">
-                <div *ngFor="let item of entry.itemsParsed" class="item-badge">
-                  {{ item.quantity }}x Producto ID: {{ item.productId }}
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </div>
-
-      <!-- Footer -->
-      <div class="modal-footer">
-        <button class="btn btn-secondary" (click)="closeHistoryModal()">Cerrar</button>
-      </div>
-
-    </div>
-  </div>
-
 </div>
