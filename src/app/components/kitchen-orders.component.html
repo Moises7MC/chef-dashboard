@@ -1,98 +1,147 @@
-<div class="kitchen-container">
-  <h1>🍳 Pedidos en Cocina</h1>
+<div class="page">
 
-  <!-- CALENDARIO -->
-  <div class="calendar-section">
-    <label for="datePicker">Selecciona una fecha:</label>
-    <input type="date" id="datePicker" [(ngModel)]="selectedDate" (change)="filterByDate()" class="date-input" />
-    <span class="date-info">{{ selectedDate | date:'dd/MM/yyyy' }}</span>
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <h1>Pedidos en Cocina</h1>
+    <div class="topbar-right">
+      <div class="search-wrap">
+        <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2">
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.35-4.35" />
+        </svg>
+        <input type="text" [(ngModel)]="searchQuery" (input)="applyFilters()" placeholder="Buscar mesa..." />
+      </div>
+      <input type="date" [(ngModel)]="selectedDate" (change)="applyFilters()" class="date-input-hidden" />
+    </div>
   </div>
 
-  <div class="orders-columns">
-    <!-- COLUMNA 1: PENDIENTE -->
-    <div class="column">
-      <h2 class="column-title pending-title">
-        <span class="icon">⏳</span>
-        Pendientes ({{ pendingOrders.length }})
-      </h2>
+  <!-- FILTROS -->
+  <div class="filters">
+    <div *ngFor="let f of filterOptions" class="pill" [class.active]="activeFilter === f.key" [attr.data-status]="f.key"
+      (click)="setFilter(f.key)">
+      {{ f.label }}
+      <span class="count">{{ getCounts(f.key) }}</span>
+    </div>
+  </div>
 
-      <div class="orders-list">
-        <div *ngFor="let order of pendingOrders" class="order-card pending-card">
-          <div class="order-header">
-            <h3>Mesa {{ order.tableNumber }}</h3>
-            <div class="order-datetime">
-              <span class="date">{{ order.createdAt | date:'dd/MM/yyyy' }}</span>
-              <span class="time">{{ order.createdAt | date:'HH:mm' }}</span>
-            </div>
-          </div>
+  <!-- GRID DE CARDS -->
+  <div class="grid">
+    <div *ngFor="let order of filteredOrders" class="card">
 
-          <div class="order-details">
-            <p><strong>Tipo:</strong> {{ order.mealType }}</p>
-            <p><strong>Total:</strong> S/. {{ order.total.toFixed(2) }}</p>
-          </div>
+      <div class="card-header">
+        <span class="card-id">Mesa {{ order.tableNumber }} - Comanda {{ order.comanda }}</span>
+        <span class="badge" [ngClass]="getBadgeClass(order.status)">{{ getStatusLabel(order.status) }}</span>
+      </div>
 
-          <div class="order-items">
-            <h4>Productos:</h4>
-            <ul>
-              <li *ngFor="let item of order.items">
-                <span class="qty">{{ item.quantity }}x</span>
-                <span class="name">{{ item.product?.name || 'Producto' }}</span>
-              </li>
-            </ul>
-          </div>
+      <div class="meta">
+        <div class="meta-row">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+          {{ order.createdAt | date:'dd/MM/yyyy' }} &mdash; {{ order.createdAt | date:'HH:mm' }}
+        </div>
+        <div class="meta-row">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          {{ order.mealType }}
+        </div>
+        <div class="total-row">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="1" x2="12" y2="23" />
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+          </svg>
+          S/. {{ order.total.toFixed(2) }}
+        </div>
+      </div>
 
-          <button (click)="markAsReady(order.id)" class="btn-ready">
-            ✓ Marcar como Listo
+      <div class="divider"></div>
+
+      <div class="items-section">
+        <div class="items-title">Productos</div>
+        <div *ngFor="let item of order.items" class="item-row">
+          <span class="item-qty">{{ item.quantity }}x</span>
+          <span>{{ item.product?.name || 'Producto' }}</span>
+        </div>
+      </div>
+
+      <div class="card-actions">
+        <button class="btn btn-info" (click)="openHistoryModal(order)">
+          📋 Ver detalles
+        </button>
+
+        <button *ngIf="order.status === 'Enviado a cocina' || order.status === 'Pendiente'" class="btn btn-green"
+          (click)="markAsReady(order.id)">
+          ✓ Marcar como listo
+        </button>
+
+        <ng-container *ngIf="order.status === 'Listo'">
+          <button class="btn btn-green btn-done" disabled>Listo para entregar</button>
+          <button class="btn btn-blue" (click)="downloadComprobante(order.id)">
+            📥 Descargar Comprobante
           </button>
-        </div>
+        </ng-container>
 
-        <div *ngIf="pendingOrders.length === 0" class="empty-state">
-          <p>Sin pedidos pendientes 😊</p>
-        </div>
+        <button *ngIf="order.status === 'Cancelado'" class="btn btn-outline" disabled>
+          Cancelado
+        </button>
       </div>
+
     </div>
 
-    <!-- COLUMNA 2: LISTO -->
-    <div class="column">
-      <h2 class="column-title ready-title">
-        <span class="icon">✓</span>
-        Listos ({{ readyOrders.length }})
-      </h2>
-
-      <div class="orders-list">
-        <div *ngFor="let order of readyOrders" class="order-card ready-card">
-          <div class="order-header">
-            <h3>Mesa {{ order.tableNumber }}</h3>
-            <div class="order-datetime">
-              <span class="date">{{ order.createdAt | date:'dd/MM/yyyy' }}</span>
-              <span class="time">{{ order.createdAt | date:'HH:mm' }}</span>
-            </div>
-          </div>
-
-          <div class="order-details">
-            <p><strong>Tipo:</strong> {{ order.mealType }}</p>
-            <p><strong>Total:</strong> S/. {{ order.total.toFixed(2) }}</p>
-          </div>
-
-          <div class="order-items">
-            <h4>Productos:</h4>
-            <ul>
-              <li *ngFor="let item of order.items">
-                <span class="qty">{{ item.quantity }}x</span>
-                <span class="name">{{ item.product?.name || 'Producto' }}</span>
-              </li>
-            </ul>
-          </div>
-
-          <div class="status-badge">
-            Listo para entregar
-          </div>
-        </div>
-
-        <div *ngIf="readyOrders.length === 0" class="empty-state">
-          <p>Sin pedidos listos</p>
-        </div>
-      </div>
+    <div *ngIf="filteredOrders.length === 0" class="empty">
+      Sin pedidos para mostrar
     </div>
   </div>
+
+  <!-- MODAL HISTÓRICO -->
+  <div *ngIf="showHistoryModal" class="modal-overlay" (click)="closeHistoryModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+
+      <!-- Header -->
+      <div class="modal-header">
+        <h2>Mesa {{ selectedOrderForHistory?.tableNumber }} - {{ selectedOrderForHistory?.createdAt | date:'dd/MM/yyyy HH:mm' }}</h2>
+        <button class="modal-close" (click)="closeHistoryModal()">✕</button>
+      </div>
+
+      <!-- Timeline -->
+      <div class="modal-body">
+        <div class="timeline">
+          <div *ngFor="let entry of orderHistory; let i = index" class="timeline-item">
+
+            <!-- Punto en la línea -->
+            <div class="timeline-dot"></div>
+
+            <!-- Contenido -->
+            <div class="timeline-content">
+              <div class="timeline-time">
+                {{ entry.createdAt | date:'HH:mm:ss' }}
+              </div>
+              <div class="timeline-action">
+                {{ entry.action === 'Inicial' ? '📍 Pedido Inicial' : '➕ Items Agregados' }}
+              </div>
+
+              <!-- Items -->
+              <div class="timeline-items">
+                <div *ngFor="let item of entry.itemsParsed" class="item-badge">
+                  {{ item.quantity }}x Producto ID: {{ item.productId }}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeHistoryModal()">Cerrar</button>
+      </div>
+
+    </div>
+  </div>
+
 </div>

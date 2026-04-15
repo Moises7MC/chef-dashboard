@@ -3,7 +3,9 @@ import * as signalR from '@microsoft/signalr';
 import { BehaviorSubject } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 
-const API_URL = 'https://app-restaurant-api.onrender.com';
+// const API_URL = 'https://app-restaurant-api.onrender.com';
+// const API_URL = 'http://localhost:5000'; // ← Cambia a localhost
+const API_URL = 'http://localhost:5245';
 
 export interface Order {
   id: number;
@@ -13,6 +15,7 @@ export interface Order {
   total: number;
   status: string;
   createdAt: string;
+  comanda: string;
 }
 
 export interface OrderItem {
@@ -77,7 +80,7 @@ export class OrderService {
       this.http.get<Order[]>(`${API_URL}/api/order`)
         .subscribe({
           next: (orders) => {
-            console.log('✓ Órdenes cargadas:', orders);
+            // console.log('✓ Órdenes cargadas:', orders);
             this.orders$.next(orders);
             resolve();
           },
@@ -134,13 +137,9 @@ export class OrderService {
   }
 
   getOrdersByDate(date: Date): Order[] {
-    // Convierte a formato YYYY-MM-DD para comparar solo la fecha
     const selectedDateStr = date.toISOString().split('T')[0];
-
     return this.orders$.value.filter(order => {
-      // Convierte la fecha del pedido también a YYYY-MM-DD
       const orderDateStr = new Date(order.createdAt).toISOString().split('T')[0];
-      console.log('Comparando:', orderDateStr, 'con', selectedDateStr);
       return orderDateStr === selectedDateStr;
     });
   }
@@ -150,6 +149,59 @@ export class OrderService {
     return this.orders$.value.filter(order => {
       const orderDateStr = new Date(order.createdAt).toISOString().split('T')[0];
       return orderDateStr === todayStr;
+    });
+  }
+
+  downloadComprobante(orderId: number): Promise<void> {
+    console.log('Descargando comprobante para orden:', orderId);
+
+    return new Promise((resolve, reject) => {
+      this.http.get(
+        `${API_URL}/api/order/${orderId}/comprobante`,
+        { responseType: 'blob' }
+      ).subscribe({
+        next: (blob: Blob) => {
+          // Crear URL del blob
+          const url = window.URL.createObjectURL(blob);
+
+          // Crear elemento <a> para descargar
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `Comprobante_${orderId}_${new Date().getTime()}.pdf`;
+
+          // Descargar
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          // Limpiar
+          window.URL.revokeObjectURL(url);
+
+          console.log('✓ Comprobante descargado');
+          resolve();
+        },
+        error: (err) => {
+          console.error('✗ Error descargando comprobante:', err);
+          reject(err);
+        }
+      });
+    });
+  }
+
+  getOrderHistory(orderId: number): Promise<any[]> {
+    return new Promise((resolve, reject) => {
+      this.http.get<any[]>(
+        `${API_URL}/api/order/${orderId}/history`
+      ).subscribe({
+        next: (history) => {
+          console.log('✓ Histórico cargado:', history);
+          resolve(history);
+        },
+        error: (err) => {
+          console.error('✗ Error cargando histórico:', err);
+          reject(err);
+        }
+      });
     });
   }
 }
