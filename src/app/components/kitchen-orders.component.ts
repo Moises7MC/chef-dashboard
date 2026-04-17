@@ -14,7 +14,12 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
 
   allOrders: Order[] = [];
   filteredOrders: Order[] = [];
-  selectedDate: string = new Date().toISOString().split('T')[0];
+  selectedDate: string = (() => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  })();
+
   searchQuery: string = '';
   activeFilter: string = 'all';
 
@@ -29,25 +34,26 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
   constructor(private orderService: OrderService) { }
 
   ngOnInit(): void {
-    // Carga inicial
-    this.orderService.loadOrders().then(() => {
-      this.applyFilters();
-    });
-
+    this.orderService.loadOrders().then(() => this.applyFiltersLocal());
     this.orderService.connect().then(() => {
       this.orderService.joinKitchenGroup();
     });
-
-    // Cuando lleguen nuevos datos via SignalR, solo aplica filtros
-    // SIN volver a cargar del backend
     this.orderService.orders$.subscribe(() => {
-      this.applyFiltersLocal(); // ← método nuevo sin HTTP
+      this.applyFiltersLocal();
     });
   }
 
-  // Filtra sobre los datos ya cargados en memoria
+  ngOnDestroy(): void {
+    this.orderService.disconnect();
+  }
+
+  applyFilters(): void {
+    this.orderService.loadOrders().then(() => this.applyFiltersLocal());
+  }
+
   applyFiltersLocal(): void {
-    const date = new Date(this.selectedDate);
+    // ← CAMBIO: agregar T12:00:00 para que no se interprete como UTC medianoche
+    const date = new Date(this.selectedDate + 'T12:00:00');
     let orders = this.orderService.getOrdersByDate(date);
 
     if (this.activeFilter !== 'all') {
@@ -63,19 +69,9 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     this.filteredOrders = orders;
   }
 
-  ngOnDestroy(): void {
-    this.orderService.disconnect();
-  }
-
-  applyFilters(): void {
-    this.orderService.loadOrders().then(() => {
-      this.applyFiltersLocal();
-    });
-  }
-
   setFilter(key: string): void {
     this.activeFilter = key;
-    this.applyFilters();
+    this.applyFiltersLocal();
   }
 
   getCounts(key: string): number {
@@ -103,21 +99,30 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     return map[status] ?? '';
   }
 
-  markAsReady(orderId: number): void {
-    this.orderService.updateOrderStatus(orderId, 'Listo').then(() => {
-      this.orderService.markOrderAsReady(orderId).catch(err => {
-        console.error('Error en SignalR:', err);
-      });
-    }).catch(err => {
-      console.error('Error:', err);
+  formatTime(isoString: string): string {
+    return new Date(isoString).toLocaleTimeString('es-PE', {
+      hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima'
     });
   }
 
+  formatDate(isoString: string): string {
+    return new Date(isoString).toLocaleDateString('es-PE', {
+      day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Lima'
+    });
+  }
+
+  getProductName(item: any): string {
+    return item?.product?.name || 'Producto';
+  }
+
+  markAsReady(orderId: number): void {
+    this.orderService.updateOrderStatus(orderId, 'Listo').then(() => {
+      this.orderService.markOrderAsReady(orderId).catch(console.error);
+    }).catch(console.error);
+  }
+
   downloadComprobante(orderId: number): void {
-    this.orderService.downloadComprobante(orderId).then(() => {
-      console.log('Descarga exitosa');
-    }).catch(err => {
-      console.error('Error en descarga:', err);
+    this.orderService.downloadComprobante(orderId).catch(() => {
       alert('Error al descargar comprobante');
     });
   }
