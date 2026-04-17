@@ -1,7 +1,8 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { OrderService, Order } from '../services/order.service';
+import { OrderService, Order } from '../../services/order.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-kitchen-orders',
@@ -24,14 +25,14 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
   activeFilter: string = 'all';
 
   filterOptions = [
-    { key: 'all', label: 'Todos' },
-    { key: 'Enviado a cocina', label: 'Nuevo' },
-    { key: 'Pendiente', label: 'Preparando' },
-    { key: 'Listo', label: 'Listo' },
-    { key: 'Cancelado', label: 'Cancelado' },
+    { key: 'all',              label: 'Todos'      },
+    { key: 'Enviado a cocina', label: 'Nuevo'      },
+    { key: 'Pendiente',        label: 'Preparando' },
+    { key: 'Listo',            label: 'Listo'      },
+    { key: 'Cancelado',        label: 'Cancelado'  },
   ];
 
-  constructor(private orderService: OrderService) { }
+  constructor(private orderService: OrderService, private auth: AuthService) {}
 
   ngOnInit(): void {
     this.orderService.loadOrders().then(() => this.applyFiltersLocal());
@@ -47,12 +48,15 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     this.orderService.disconnect();
   }
 
+  logout(): void {
+    this.auth.logout();
+  }
+
   applyFilters(): void {
     this.orderService.loadOrders().then(() => this.applyFiltersLocal());
   }
 
   applyFiltersLocal(): void {
-    // ← CAMBIO: agregar T12:00:00 para que no se interprete como UTC medianoche
     const date = new Date(this.selectedDate + 'T12:00:00');
     let orders = this.orderService.getOrdersByDate(date);
 
@@ -82,9 +86,9 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
   getStatusLabel(status: string): string {
     const map: Record<string, string> = {
       'Enviado a cocina': 'Nuevo',
-      'Pendiente': 'Preparando',
-      'Listo': 'Listo',
-      'Cancelado': 'Cancelado',
+      'Pendiente':        'Preparando',
+      'Listo':            'Listo',
+      'Cancelado':        'Cancelado',
     };
     return map[status] ?? status;
   }
@@ -92,9 +96,9 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
   getBadgeClass(status: string): string {
     const map: Record<string, string> = {
       'Enviado a cocina': 'badge-new',
-      'Pendiente': 'badge-pending',
-      'Listo': 'badge-ready',
-      'Cancelado': 'badge-cancelled',
+      'Pendiente':        'badge-pending',
+      'Listo':            'badge-ready',
+      'Cancelado':        'badge-cancelled',
     };
     return map[status] ?? '';
   }

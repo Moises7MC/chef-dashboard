@@ -208,3 +208,20 @@
   .search-wrap input { width: 100%; }
   .grid { grid-template-columns: 1fr; }
 }
+
+.btn-logout {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #fca5a5;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .2s;
+}
+.btn-logout svg { width: 16px; height: 16px; }
+.btn-logout:hover { background: rgba(239, 68, 68, 0.28); }
