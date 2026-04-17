@@ -2,7 +2,7 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
-/** Protege /kitchen — redirige a /login si no hay sesión */
+/** Protege /dashboard — redirige a /login si no hay sesión */
 export const authGuard: CanActivateFn = () => {
   const auth   = inject(AuthService);
   const router = inject(Router);
@@ -11,11 +11,11 @@ export const authGuard: CanActivateFn = () => {
   return false;
 };
 
-/** Protege /login — redirige a /kitchen si ya está logueado */
+/** Protege /login — redirige a /dashboard si ya está logueado */
 export const noAuthGuard: CanActivateFn = () => {
   const auth   = inject(AuthService);
   const router = inject(Router);
   if (!auth.isLoggedIn()) return true;
-  router.navigate(['/kitchen']);
+  router.navigate(['/dashboard']);
   return false;
 };

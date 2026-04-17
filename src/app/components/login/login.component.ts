@@ -21,7 +21,7 @@ export class LoginComponent {
 
   constructor(private auth: AuthService, private router: Router) {
     if (this.auth.isLoggedIn()) {
-      this.router.navigate(['/kitchen']);
+      this.router.navigate(['/dashboard']);
     }
     history.pushState(null, '', window.location.href);
   }
@@ -42,7 +42,7 @@ export class LoginComponent {
       const ok = this.auth.login(this.username.trim(), this.password);
       this.loading = false;
       if (ok) {
-        this.router.navigate(['/kitchen']);
+        this.router.navigate(['/dashboard']);
       } else {
         this.error = 'Usuario o contraseña incorrectos.';
       }
