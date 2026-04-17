@@ -9,13 +9,15 @@ export interface OrderHistoryEntry {
   id: number;
   orderId: number;
   createdAt: string;
-  action: string;
+  action: string;   // 'Inicial' | 'Agregado' | 'Modificado' | 'Cancelado'
   itemsAdded: string;
 }
 
 export interface OrderHistoryItem {
   productId: number;
+  productName?: string;
   quantity: number;
+  oldQuantity?: number;   // para acción "Modificado"
   unitPrice: number;
   product?: { id: number; name: string };
 }
@@ -26,6 +28,8 @@ export interface OrderRound {
   createdAt: string;
   items: OrderHistoryItem[];
   isLatest: boolean;
+  isCancelled: boolean;   // true = ronda de cancelación
+  isModified: boolean;    // true = ronda de modificación
 }
 
 export interface Order {
@@ -51,37 +55,31 @@ export interface OrderItem {
   product?: { id: number; name: string };
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class OrderService {
   private hubConnection: signalR.HubConnection | null = null;
   public orders$ = new BehaviorSubject<Order[]>([]);
-
-  // Cache de productos: id -> nombre
   private productCache = new Map<number, string>();
 
   constructor(private http: HttpClient) {
     this.initializeConnection();
-    this.preloadProducts();  // ← carga nombres al iniciar
+    this.preloadProducts();
   }
 
-  // Carga todos los productos una sola vez para tener sus nombres
   private preloadProducts(): void {
     this.http.get<any[]>(`${API_URL}/api/product`).subscribe({
-      next: (products) => {
-        products.forEach(p => this.productCache.set(p.id, p.name));
-      },
+      next: (products) => products.forEach(p => this.productCache.set(p.id, p.name)),
       error: () => console.warn('No se pudo pre-cargar productos')
     });
   }
 
-  // 3 fuentes de fallback para resolver el nombre
   private resolveProductName(
     productId: number,
     orderItems: OrderItem[],
-    inlineProduct?: { id?: number; name?: string } | null
+    inlineProduct?: { id?: number; name?: string } | null,
+    inlineName?: string
   ): string {
+    if (inlineName) return inlineName;
     if (inlineProduct?.name) return inlineProduct.name;
     if (this.productCache.has(productId)) return this.productCache.get(productId)!;
     const found = orderItems.find(oi => oi.productId === productId);
@@ -104,16 +102,11 @@ export class OrderService {
     return new Promise((resolve, reject) => {
       this.http.get<Order[]>(`${API_URL}/api/order`).subscribe({
         next: async (orders) => {
-          const enriched = await Promise.all(
-            orders.map(o => this.enrichOrderWithRounds(o))
-          );
+          const enriched = await Promise.all(orders.map(o => this.enrichOrderWithRounds(o)));
           this.orders$.next(enriched);
           resolve();
         },
-        error: (err) => {
-          console.error('Error cargando órdenes:', err);
-          reject(err);
-        }
+        error: (err) => { console.error('Error cargando órdenes:', err); reject(err); }
       });
     });
   }
@@ -125,9 +118,7 @@ export class OrderService {
           const rounds = this.buildRounds(history, order);
           resolve({ ...order, rounds, hasMultipleRounds: rounds.length > 1 });
         },
-        error: () => {
-          resolve({ ...order, rounds: [], hasMultipleRounds: false });
-        }
+        error: () => resolve({ ...order, rounds: [], hasMultipleRounds: false })
       });
     });
   }
@@ -142,54 +133,67 @@ export class OrderService {
           productId: i.productId,
           quantity: i.quantity,
           unitPrice: i.unitPrice,
-          product: {
-            id: i.productId,
-            name: this.resolveProductName(i.productId, order.items, i.product)
-          }
+          product: { id: i.productId, name: this.resolveProductName(i.productId, order.items, i.product) }
         })),
-        isLatest: false
+        isLatest: false,
+        isCancelled: false,
+        isModified: false
       }];
     }
+
+    // Cuántas rondas "normales" hay (Inicial + Agregado)
+    const normalRounds = history.filter(h => h.action === 'Inicial' || h.action === 'Agregado').length;
 
     return history.map((entry, index) => {
       let rawItems: any[] = [];
       try {
         const parsed = JSON.parse(entry.itemsAdded);
         if (Array.isArray(parsed)) rawItems = parsed;
-      } catch {
-        rawItems = [];
-      }
+      } catch { rawItems = []; }
+
+      const isCancelled = entry.action === 'Cancelado';
+      const isModified  = entry.action === 'Modificado';
 
       const items: OrderHistoryItem[] = rawItems.map((raw: any) => {
-        const productId: number = raw.productId ?? raw.ProductId ?? 0;
-        const quantity: number = raw.quantity ?? raw.Quantity ?? 1;
-        const unitPrice: number = raw.unitPrice ?? raw.UnitPrice ?? 0;
-        const inlineProduct = raw.product ?? raw.Product ?? null;
-        const name = this.resolveProductName(productId, order.items, inlineProduct);
-        return { productId, quantity, unitPrice, product: { id: productId, name } };
+        const productId: number  = raw.productId    ?? raw.ProductId    ?? 0;
+        const quantity: number   = raw.quantity      ?? raw.Quantity     ?? 1;
+        const oldQuantity        = raw.oldQuantity   ?? raw.OldQuantity  ?? undefined;
+        const unitPrice: number  = raw.unitPrice     ?? raw.UnitPrice    ?? 0;
+        const inlineName: string = raw.productName   ?? raw.ProductName  ?? '';
+        const inlineProduct      = raw.product       ?? raw.Product      ?? null;
+        const name = this.resolveProductName(productId, order.items, inlineProduct, inlineName);
+
+        return { productId, quantity, oldQuantity, unitPrice, product: { id: productId, name } };
       });
+
+      // isLatest: solo aplica para rondas de adición (Inicial/Agregado)
+      const isLatestNormal =
+        (entry.action === 'Inicial' || entry.action === 'Agregado') &&
+        normalRounds > 1 &&
+        index === history.map((h, i) => ({ h, i }))
+          .filter(x => x.h.action === 'Inicial' || x.h.action === 'Agregado')
+          .at(-1)?.i;
 
       return {
         roundNumber: index + 1,
         action: entry.action,
         createdAt: entry.createdAt,
         items,
-        isLatest: index === history.length - 1 && history.length > 1
+        isLatest: !!isLatestNormal,
+        isCancelled,
+        isModified
       };
     });
   }
 
   getOrdersByDate(date: Date): Order[] {
     const pad = (n: number) => String(n).padStart(2, '0');
-    const selectedStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-
+    const selectedStr = `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
     return this.orders$.value.filter(order => {
       const d = new Date(order.createdAt);
-      // Convertir de UTC a hora Perú (UTC-5)
       const peruOffset = -5 * 60;
-      const localMs = d.getTime() + (peruOffset - d.getTimezoneOffset()) * 60000;
-      const local = new Date(localMs);
-      const orderStr = `${local.getFullYear()}-${pad(local.getMonth() + 1)}-${pad(local.getDate())}`;
+      const local = new Date(d.getTime() + (peruOffset - d.getTimezoneOffset()) * 60000);
+      const orderStr = `${local.getFullYear()}-${pad(local.getMonth()+1)}-${pad(local.getDate())}`;
       return orderStr === selectedStr;
     });
   }
@@ -197,39 +201,25 @@ export class OrderService {
   getTodayOrders(): Order[] {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
-    const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-
+    const today = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
     return this.orders$.value.filter(o => {
       const d = new Date(o.createdAt);
-      // Convertir UTC → hora Perú (UTC-5)
       const local = new Date(d.getTime() + (-5 * 60 - d.getTimezoneOffset()) * 60000);
-      const orderDate = `${local.getFullYear()}-${pad(local.getMonth() + 1)}-${pad(local.getDate())}`;
+      const orderDate = `${local.getFullYear()}-${pad(local.getMonth()+1)}-${pad(local.getDate())}`;
       return orderDate === today;
     });
   }
 
-  getOrders(): Order[] {
-    return this.orders$.value;
-  }
+  getOrders(): Order[] { return this.orders$.value; }
 
   connect(): Promise<void> {
-    if (this.hubConnection?.state === signalR.HubConnectionState.Connected) {
-      return Promise.resolve();
-    }
+    if (this.hubConnection?.state === signalR.HubConnectionState.Connected) return Promise.resolve();
     return this.hubConnection!.start();
   }
 
-  disconnect(): Promise<void> {
-    return this.hubConnection!.stop();
-  }
-
-  joinKitchenGroup(): Promise<void> {
-    return this.hubConnection!.invoke('JoinKitchenGroup');
-  }
-
-  markOrderAsReady(orderId: number): Promise<void> {
-    return this.hubConnection!.invoke('OrderReady', orderId);
-  }
+  disconnect(): Promise<void> { return this.hubConnection!.stop(); }
+  joinKitchenGroup(): Promise<void> { return this.hubConnection!.invoke('JoinKitchenGroup'); }
+  markOrderAsReady(orderId: number): Promise<void> { return this.hubConnection!.invoke('OrderReady', orderId); }
 
   updateOrderStatus(orderId: number, status: string): Promise<void> {
     return new Promise((resolve, reject) => {

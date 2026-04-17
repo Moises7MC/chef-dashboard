@@ -43,7 +43,6 @@
           <span class="badge" [ngClass]="getBadgeClass(order.status)">
             {{ getStatusLabel(order.status) }}
           </span>
-          <!-- Badge de múltiples rondas -->
           <span *ngIf="order.hasMultipleRounds" class="badge-rounds">
             +{{ order.rounds!.length }} rondas
           </span>
@@ -55,16 +54,14 @@
         <div class="meta-row">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" />
-            <line x1="3" y1="10" x2="21" y2="10" />
+            <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="3" y1="10" x2="21" y2="10" />
           </svg>
           {{ formatDate(order.createdAt) }} &mdash; {{ formatTime(order.createdAt) }}
         </div>
         <div class="meta-row">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
+            <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
           </svg>
           {{ order.mealType }}
         </div>
@@ -80,33 +77,48 @@
 
       <div class="divider"></div>
 
-      <!-- ══════════════════════════════════════════
-           SECCIÓN DE RONDAS
-           Si hay historial → mostrar por rondas
-           Si no hay / orden simple → mostrar lista plana
-           ══════════════════════════════════════════ -->
+      <!-- RONDAS -->
       <div class="rounds-section">
-
-        <!-- CON RONDAS: tiene historial cargado -->
         <ng-container *ngIf="order.rounds && order.rounds.length > 0; else flatItems">
 
           <div class="section-label">Productos por ronda</div>
 
           <div *ngFor="let round of order.rounds"
             class="round-block"
-            [class.round-old]="!round.isLatest"
-            [class.round-new]="round.isLatest">
+            [class.round-old]="!round.isLatest && !round.isCancelled && !round.isModified"
+            [class.round-new]="round.isLatest"
+            [class.round-cancelled]="round.isCancelled"
+            [class.round-modified]="round.isModified">
 
             <!-- Cabecera de la ronda -->
-            <div class="round-header" [class.round-header-old]="!round.isLatest"
-              [class.round-header-new]="round.isLatest">
+            <div class="round-header"
+              [class.round-header-old]="!round.isLatest && !round.isCancelled && !round.isModified"
+              [class.round-header-new]="round.isLatest"
+              [class.round-header-cancelled]="round.isCancelled"
+              [class.round-header-modified]="round.isModified">
+
               <div class="round-header-left">
-                <div class="round-dot" [class.dot-old]="!round.isLatest"
-                  [class.dot-new]="round.isLatest"></div>
+                <div class="round-dot"
+                  [class.dot-old]="!round.isLatest && !round.isCancelled && !round.isModified"
+                  [class.dot-new]="round.isLatest"
+                  [class.dot-cancelled]="round.isCancelled"
+                  [class.dot-modified]="round.isModified">
+                </div>
                 <span>
-                  Ronda {{ round.roundNumber }}
-                  <span class="round-status" *ngIf="!round.isLatest">— enviado</span>
-                  <span class="round-status-new" *ngIf="round.isLatest">— recién llegó</span>
+                  <!-- Rondas normales -->
+                  <ng-container *ngIf="!round.isCancelled && !round.isModified">
+                    Ronda {{ round.roundNumber }}
+                    <span class="round-status" *ngIf="!round.isLatest"> — enviado</span>
+                    <span class="round-status-new" *ngIf="round.isLatest"> — recién llegó</span>
+                  </ng-container>
+                  <!-- Ronda cancelada -->
+                  <ng-container *ngIf="round.isCancelled">
+                    Cancelación
+                  </ng-container>
+                  <!-- Ronda modificada -->
+                  <ng-container *ngIf="round.isModified">
+                    Modificación
+                  </ng-container>
                 </span>
               </div>
               <span class="round-time">{{ formatTime(round.createdAt) }}</span>
@@ -114,16 +126,48 @@
 
             <!-- Items de la ronda -->
             <div class="round-items">
-              <div *ngFor="let item of round.items" class="item-row">
-                <span class="item-qty" [class.item-qty-new]="round.isLatest">
-                  {{ item.quantity }}x
-                </span>
-                <span class="item-name">{{ getProductName(item) }}</span>
-                <span *ngIf="round.isLatest" class="item-new-badge">nuevo</span>
-              </div>
+
+              <!-- Items normales (Inicial / Agregado) -->
+              <ng-container *ngIf="!round.isCancelled && !round.isModified">
+                <div *ngFor="let item of round.items" class="item-row">
+                  <span class="item-qty" [class.item-qty-new]="round.isLatest">
+                    {{ item.quantity }}x
+                  </span>
+                  <span class="item-name">{{ getProductName(item) }}</span>
+                  <span *ngIf="round.isLatest" class="item-new-badge">nuevo</span>
+                </div>
+              </ng-container>
+
+              <!-- Items cancelados: fondo rojo, tachado -->
+              <ng-container *ngIf="round.isCancelled">
+                <div *ngFor="let item of round.items" class="item-row item-row-cancelled">
+                  <span class="item-qty item-qty-cancelled">
+                    {{ item.quantity }}x
+                  </span>
+                  <span class="item-name item-name-cancelled">{{ getProductName(item) }}</span>
+                  <span class="item-cancelled-badge">cancelado</span>
+                </div>
+              </ng-container>
+
+              <!-- Items modificados: cantidad anterior tachada → nueva -->
+              <ng-container *ngIf="round.isModified">
+                <div *ngFor="let item of round.items" class="item-row item-row-modified">
+                  <span class="item-qty item-qty-modified">
+                    {{ item.quantity }}x
+                  </span>
+                  <span class="item-name">{{ getProductName(item) }}</span>
+                  <div class="item-modified-info">
+                    <span class="old-qty" *ngIf="item.oldQuantity !== undefined">
+                      era {{ item.oldQuantity }}x
+                    </span>
+                    <span class="item-modified-badge">modificado</span>
+                  </div>
+                </div>
+              </ng-container>
+
               <div *ngIf="round.items.length === 0" class="item-row">
                 <span style="color: var(--color-text-tertiary); font-size: 11px;">
-                  Sin detalle disponible
+                  Sin detalle
                 </span>
               </div>
             </div>
@@ -131,7 +175,7 @@
           </div>
         </ng-container>
 
-        <!-- SIN RONDAS: fallback a lista plana (orden simple) -->
+        <!-- Fallback lista plana -->
         <ng-template #flatItems>
           <div class="section-label">Productos</div>
           <div *ngFor="let item of order.items" class="item-row-flat">
@@ -139,31 +183,25 @@
             <span>{{ item.product?.name || 'Producto' }}</span>
           </div>
         </ng-template>
-
       </div>
 
       <!-- ACCIONES -->
       <div class="card-actions">
-
         <button *ngIf="order.status === 'Enviado a cocina' || order.status === 'Pendiente'"
-          class="btn btn-green"
-          (click)="markAsReady(order.id)">
+          class="btn btn-green" (click)="markAsReady(order.id)">
           ✓ Marcar como listo
         </button>
-
         <ng-container *ngIf="order.status === 'Listo'">
-          <button class="btn btn-green btn-done" disabled>
-            Listo para entregar
-          </button>
+          <button class="btn btn-green btn-done" disabled>Listo para entregar</button>
           <button class="btn btn-blue" (click)="downloadComprobante(order.id)">
             Descargar Comprobante
           </button>
         </ng-container>
-
         <button *ngIf="order.status === 'Cancelado'" class="btn btn-outline" disabled>
           Cancelado
         </button>
       </div>
+
     </div>
 
     <div *ngIf="filteredOrders.length === 0" class="empty">
