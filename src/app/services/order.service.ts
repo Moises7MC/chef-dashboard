@@ -3,7 +3,8 @@ import * as signalR from '@microsoft/signalr';
 import { BehaviorSubject } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 
-const API_URL = 'http://localhost:5245';
+// const API_URL = 'http://localhost:5245';
+const API_URL = 'https://app-restaurant-api.onrender.com';
 
 export interface OrderHistoryEntry {
   id: number;
