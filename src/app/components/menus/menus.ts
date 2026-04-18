@@ -39,7 +39,7 @@ interface UnsplashPhoto {
 })
 export class MenusComponent implements OnInit {
   // private apiUrl = 'http://localhost:5245/api';
-  private readonly apiUrl = 'https://app-restaurant-api.onrender.com/api/waiter';
+  private apiUrl = 'https://app-restaurant-api.onrender.com/api'; // ✅ CORRECTO
   private unsplashKey = 'GZOeZzgY8sguV5Lb_exuWp4_nqvGfLD6T5eSQARgGpU';
 
   activeTab: 'categories' | 'products' = 'categories';
