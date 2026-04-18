@@ -44,6 +44,7 @@ export interface Order {
   waiterName?: string;   // ← AGREGAR ESTA LÍNEA
   rounds?: OrderRound[];
   hasMultipleRounds?: boolean;
+  updatedAt?: string;
 }
 
 export interface OrderItem {

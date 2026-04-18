@@ -225,3 +225,68 @@
 }
 .btn-logout svg { width: 16px; height: 16px; }
 .btn-logout:hover { background: rgba(239, 68, 68, 0.28); }
+
+/* ══ CRONÓMETRO ══════════════════════════════════════════════
+   Pega este bloque al FINAL de kitchen-orders.component.css
+════════════════════════════════════════════════════════════ */
+
+.timer-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 0;
+  align-self: flex-start;
+  height: 22px;
+}
+
+.timer-label {
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.8;
+  margin-left: 2px;
+}
+
+/* Verde: 0–10 min */
+.timer-green {
+  background: #d1fae5;
+  color: #065f46;
+}
+.timer-green svg { stroke: #059669; }
+
+/* Naranja: 10–20 min */
+.timer-orange {
+  background: #fef3c7;
+  color: #92400e;
+}
+.timer-orange svg { stroke: #d97706; }
+
+/* Rojo: 20+ min */
+.timer-red {
+  background: #fee2e2;
+  color: #991b1b;
+  animation: pulse-red 1.5s ease-in-out infinite;
+}
+.timer-red svg { stroke: #dc2626; }
+
+/* Gris: listo o cancelado */
+.timer-done {
+  background: #f3f4f6;
+  color: #9ca3af;
+}
+.timer-done svg { stroke: #9ca3af; }
+
+@keyframes pulse-red {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.7; }
+}
+
+.timer-value {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+}
