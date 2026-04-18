@@ -1,0 +1,305 @@
+<div class="caja-page">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Flujo de Caja</h1>
+      <p class="page-subtitle">Gestión de cobros y transacciones del día</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-gasto" (click)="openGastoModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Registrar Gasto
+      </button>
+      <button class="btn-cierre" (click)="openCierreModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        Cierre de Caja
+      </button>
+    </div>
+  </div>
+
+  <!-- RESUMEN RÁPIDO -->
+  <div class="summary-cards">
+    <div class="summary-card income">
+      <div class="summary-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      </div>
+      <div class="summary-info">
+        <span class="summary-label">Ingresos</span>
+        <span class="summary-value">S/. {{ summary.ingresos.toFixed(2) }}</span>
+      </div>
+    </div>
+    <div class="summary-card expense">
+      <div class="summary-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      </div>
+      <div class="summary-info">
+        <span class="summary-label">Gastos</span>
+        <span class="summary-value">S/. {{ summary.gastos.toFixed(2) }}</span>
+      </div>
+    </div>
+    <div class="summary-card balance" [class.negative]="summary.balance < 0">
+      <div class="summary-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3z"/><path d="M3 9h18M9 21V9"/></svg>
+      </div>
+      <div class="summary-info">
+        <span class="summary-label">Balance</span>
+        <span class="summary-value">S/. {{ summary.balance.toFixed(2) }}</span>
+      </div>
+    </div>
+    <div class="summary-card orders">
+      <div class="summary-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+      </div>
+      <div class="summary-info">
+        <span class="summary-label">Transacciones</span>
+        <span class="summary-value">{{ summary.totalTransacciones }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn" [class.active]="activeTab === 'cobrar'" (click)="activeTab = 'cobrar'">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+      Cobrar
+      <span class="tab-badge" *ngIf="ordenesListas.length > 0">{{ ordenesListas.length }}</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'transacciones'" (click)="activeTab = 'transacciones'">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+      Transacciones
+      <span class="tab-badge">{{ transactions.length }}</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'resumen'" (click)="activeTab = 'resumen'">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      Resumen
+    </button>
+  </div>
+
+  <!-- ══ TAB: COBRAR ══ -->
+  <div *ngIf="activeTab === 'cobrar'" class="tab-content">
+    <div *ngIf="ordenesListas.length === 0" class="empty-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+      <p>No hay órdenes listas para cobrar</p>
+      <span>Las órdenes aparecen aquí cuando el chef las marca como "Listo"</span>
+    </div>
+
+    <div class="orders-grid" *ngIf="ordenesListas.length > 0">
+      <div class="order-card" *ngFor="let order of ordenesListas">
+        <div class="order-card-header">
+          <div>
+            <span class="order-table">Mesa {{ order.tableNumber }}</span>
+            <span class="order-comanda">Comanda {{ order.comanda }}</span>
+          </div>
+          <span class="badge-ready">Listo</span>
+        </div>
+
+        <div class="order-meta">
+          <span>🕐 {{ formatTime(order.createdAt) }}</span>
+          <span *ngIf="order.waiterName">👤 {{ order.waiterName }}</span>
+          <span>🍽️ {{ order.mealType }}</span>
+        </div>
+
+        <div class="order-items">
+          <div class="order-item" *ngFor="let item of order.items">
+            <span class="item-qty-badge">{{ item.quantity }}x</span>
+            <span class="item-name">{{ item.productName }}</span>
+            <span class="item-price">S/. {{ (item.quantity * item.unitPrice).toFixed(2) }}</span>
+          </div>
+        </div>
+
+        <div class="order-total">
+          <span>Total a cobrar</span>
+          <span class="total-amount">S/. {{ order.total.toFixed(2) }}</span>
+        </div>
+
+        <button class="btn-cobrar" (click)="openCobrarModal(order)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+          Cobrar Mesa {{ order.tableNumber }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: TRANSACCIONES ══ -->
+  <div *ngIf="activeTab === 'transacciones'" class="tab-content">
+    <div *ngIf="transactions.length === 0" class="empty-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+      <p>No hay transacciones hoy</p>
+    </div>
+
+    <div class="transactions-list" *ngIf="transactions.length > 0">
+      <div class="transaction-row" *ngFor="let t of transactions">
+        <div class="tx-icon" [class.tx-income]="t.type === 'ingreso'" [class.tx-expense]="t.type === 'gasto'">
+          <span *ngIf="t.type === 'ingreso'">{{ getPaymentIcon(t.paymentMethod) }}</span>
+          <span *ngIf="t.type === 'gasto'">📤</span>
+        </div>
+        <div class="tx-info">
+          <span class="tx-desc">{{ t.description }}</span>
+          <span class="tx-meta">
+            {{ formatTime(t.createdAt) }}
+            <span *ngIf="t.paymentMethod" class="tx-method">• {{ t.paymentMethod }}</span>
+            <span *ngIf="t.tableNumber" class="tx-table">• Mesa {{ t.tableNumber }}</span>
+          </span>
+        </div>
+        <span class="tx-amount" [class.amount-income]="t.type === 'ingreso'" [class.amount-expense]="t.type === 'gasto'">
+          {{ t.type === 'ingreso' ? '+' : '-' }}S/. {{ t.amount.toFixed(2) }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: RESUMEN ══ -->
+  <div *ngIf="activeTab === 'resumen'" class="tab-content">
+    <div class="resumen-grid">
+      <!-- Por método de pago -->
+      <div class="resumen-card">
+        <h3 class="resumen-title">Ingresos por método de pago</h3>
+        <div *ngIf="summary.porMetodoPago.length === 0" class="empty-small">Sin ingresos aún</div>
+        <div class="method-list" *ngIf="summary.porMetodoPago.length > 0">
+          <div class="method-row" *ngFor="let m of summary.porMetodoPago">
+            <div class="method-left">
+              <span class="method-icon">{{ getPaymentIcon(m.metodo) }}</span>
+              <span class="method-name">{{ m.metodo }}</span>
+              <span class="method-count">{{ m.count }} cobro{{ m.count !== 1 ? 's' : '' }}</span>
+            </div>
+            <span class="method-total">S/. {{ m.total.toFixed(2) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Balance del día -->
+      <div class="resumen-card">
+        <h3 class="resumen-title">Balance del día</h3>
+        <div class="balance-detail">
+          <div class="balance-row">
+            <span class="balance-label">Total ingresos</span>
+            <span class="balance-value income">S/. {{ summary.ingresos.toFixed(2) }}</span>
+          </div>
+          <div class="balance-row">
+            <span class="balance-label">Total gastos</span>
+            <span class="balance-value expense">- S/. {{ summary.gastos.toFixed(2) }}</span>
+          </div>
+          <div class="balance-divider"></div>
+          <div class="balance-row total">
+            <span class="balance-label">Balance neto</span>
+            <span class="balance-value" [class.income]="summary.balance >= 0" [class.expense]="summary.balance < 0">
+              S/. {{ summary.balance.toFixed(2) }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ MODAL COBRAR ══ -->
+<div class="modal-overlay" *ngIf="showCobrarModal" (click)="showCobrarModal = false">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Cobrar Mesa {{ selectedOrder?.tableNumber }}</h2>
+      <button class="modal-close" (click)="showCobrarModal = false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" *ngIf="selectedOrder">
+      <div class="cobrar-total">
+        <span>Total a cobrar</span>
+        <strong>S/. {{ selectedOrder.total.toFixed(2) }}</strong>
+      </div>
+
+      <div class="form-group">
+        <label>Método de pago</label>
+        <div class="payment-methods">
+          <button *ngFor="let method of paymentMethods"
+            class="payment-btn"
+            [class.selected]="selectedPaymentMethod === method"
+            (click)="selectedPaymentMethod = method">
+            <span class="payment-btn-icon">{{ getPaymentIcon(method) }}</span>
+            <span>{{ method }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="showCobrarModal = false">Cancelar</button>
+      <button class="btn-save green" (click)="cobrarOrden()" [disabled]="procesando">
+        {{ procesando ? 'Procesando...' : 'Confirmar Cobro' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL GASTO ══ -->
+<div class="modal-overlay" *ngIf="showGastoModal" (click)="showGastoModal = false">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Registrar Gasto</h2>
+      <button class="modal-close" (click)="showGastoModal = false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Descripción *</label>
+        <input type="text" [(ngModel)]="gastoForm.description" placeholder="Ej: Compra de ingredientes" class="form-input">
+      </div>
+      <div class="form-group">
+        <label>Monto (S/.) *</label>
+        <input type="number" [(ngModel)]="gastoForm.amount" min="0" step="0.50" class="form-input">
+      </div>
+      <div class="form-error" *ngIf="gastoError">{{ gastoError }}</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="showGastoModal = false">Cancelar</button>
+      <button class="btn-save" (click)="registrarGasto()" [disabled]="procesando">
+        {{ procesando ? 'Guardando...' : 'Registrar Gasto' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL CIERRE ══ -->
+<div class="modal-overlay" *ngIf="showCierreModal" (click)="showCierreModal = false">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Cierre de Caja</h2>
+      <button class="modal-close" (click)="showCierreModal = false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <!-- Resultado del cierre -->
+      <div *ngIf="cierreResult" class="cierre-result">
+        <div class="cierre-check">✅</div>
+        <h3>Caja cerrada correctamente</h3>
+        <p>{{ cierreResult.fecha }}</p>
+        <div class="cierre-summary">
+          <div class="cierre-row"><span>Ingresos</span><strong class="income">S/. {{ cierreResult.ingresos?.toFixed(2) }}</strong></div>
+          <div class="cierre-row"><span>Gastos</span><strong class="expense">S/. {{ cierreResult.gastos?.toFixed(2) }}</strong></div>
+          <div class="cierre-row total"><span>Balance final</span><strong>S/. {{ cierreResult.balance?.toFixed(2) }}</strong></div>
+        </div>
+        <button class="btn-save" style="width:100%;margin-top:1rem" (click)="showCierreModal = false">Cerrar</button>
+      </div>
+
+      <!-- Confirmación -->
+      <div *ngIf="!cierreResult">
+        <p class="cierre-warning">
+          ⚠️ Esta acción cerrará todas las transacciones del día. El resumen quedará guardado.
+        </p>
+        <div class="cierre-preview">
+          <div class="cierre-row"><span>Ingresos del día</span><strong>S/. {{ summary.ingresos.toFixed(2) }}</strong></div>
+          <div class="cierre-row"><span>Gastos del día</span><strong>S/. {{ summary.gastos.toFixed(2) }}</strong></div>
+          <div class="cierre-row total"><span>Balance</span><strong>S/. {{ summary.balance.toFixed(2) }}</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" *ngIf="!cierreResult">
+      <button class="btn-cancel" (click)="showCierreModal = false">Cancelar</button>
+      <button class="btn-save red" (click)="ejecutarCierre()" [disabled]="procesando">
+        {{ procesando ? 'Cerrando...' : 'Confirmar Cierre' }}
+      </button>
+    </div>
+  </div>
+</div>

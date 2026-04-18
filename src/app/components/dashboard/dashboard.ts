@@ -52,6 +52,15 @@ export class DashboardComponent {
            <rect x="9" y="3" width="6" height="4" rx="1"/>
            <path d="M9 12h6M9 16h4"/>
          </svg>`
+    },
+    {
+      key: 'caja',
+      label: 'Caja',
+      route: '/dashboard/caja',
+      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+           <rect x="2" y="5" width="20" height="14" rx="2"/>
+           <path d="M2 10h20"/>
+         </svg>`
     }
   ];
   sidebarCollapsed: any;

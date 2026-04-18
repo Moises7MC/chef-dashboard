@@ -29,7 +29,11 @@ export const routes: Routes = [
       {
         path: 'users',
         loadComponent: () => import('./components/users/users').then(m => m.UsersComponent)
-      }
+      },
+      {
+        path: 'caja',
+        loadComponent: () => import('./components/caja/caja').then(m => m.CajaComponent)
+      },
     ]
   },
   { path: '**', redirectTo: '/login' }
