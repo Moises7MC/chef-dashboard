@@ -30,7 +30,8 @@ interface WaiterForm {
 })
 export class UsersComponent implements OnInit {
 
-  private readonly API = 'http://localhost:5245/api/waiter';
+  // private readonly API = 'http://localhost:5245/api/waiter';
+  private readonly API = 'https://app-restaurant-api.onrender.com/api/waiter';
 
   waiters: Waiter[] = [];
   loading = false;
