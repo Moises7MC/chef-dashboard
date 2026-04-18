@@ -39,7 +39,8 @@
 
       <!-- ENCABEZADO -->
       <div class="card-header">
-        <span class="card-id">Mesa {{ order.tableNumber }} — Comanda {{ order.comanda }}</span>
+        <!-- <span class="card-id">Mesa {{ order.tableNumber }} — Comanda {{ order.comanda }}</span> -->
+        <span class="card-id">Mesa {{ order.tableNumber }}</span>
         <div class="card-badges">
           <span class="badge" [ngClass]="getBadgeClass(order.status)">
             {{ getStatusLabel(order.status) }}
