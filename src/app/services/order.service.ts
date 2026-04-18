@@ -41,6 +41,7 @@ export interface Order {
   status: string;
   createdAt: string;
   comanda: string;
+  waiterName?: string;   // ← AGREGAR ESTA LÍNEA
   rounds?: OrderRound[];
   hasMultipleRounds?: boolean;
 }
@@ -152,15 +153,15 @@ export class OrderService {
       } catch { rawItems = []; }
 
       const isCancelled = entry.action === 'Cancelado';
-      const isModified  = entry.action === 'Modificado';
+      const isModified = entry.action === 'Modificado';
 
       const items: OrderHistoryItem[] = rawItems.map((raw: any) => {
-        const productId: number  = raw.productId    ?? raw.ProductId    ?? 0;
-        const quantity: number   = raw.quantity      ?? raw.Quantity     ?? 1;
-        const oldQuantity        = raw.oldQuantity   ?? raw.OldQuantity  ?? undefined;
-        const unitPrice: number  = raw.unitPrice     ?? raw.UnitPrice    ?? 0;
-        const inlineName: string = raw.productName   ?? raw.ProductName  ?? '';
-        const inlineProduct      = raw.product       ?? raw.Product      ?? null;
+        const productId: number = raw.productId ?? raw.ProductId ?? 0;
+        const quantity: number = raw.quantity ?? raw.Quantity ?? 1;
+        const oldQuantity = raw.oldQuantity ?? raw.OldQuantity ?? undefined;
+        const unitPrice: number = raw.unitPrice ?? raw.UnitPrice ?? 0;
+        const inlineName: string = raw.productName ?? raw.ProductName ?? '';
+        const inlineProduct = raw.product ?? raw.Product ?? null;
         const name = this.resolveProductName(productId, order.items, inlineProduct, inlineName);
 
         return { productId, quantity, oldQuantity, unitPrice, product: { id: productId, name } };
@@ -188,25 +189,37 @@ export class OrderService {
 
   getOrdersByDate(date: Date): Order[] {
     const pad = (n: number) => String(n).padStart(2, '0');
-    const selectedStr = `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
+    const selectedStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+
     return this.orders$.value.filter(order => {
       const d = new Date(order.createdAt);
-      const peruOffset = -5 * 60;
-      const local = new Date(d.getTime() + (peruOffset - d.getTimezoneOffset()) * 60000);
-      const orderStr = `${local.getFullYear()}-${pad(local.getMonth()+1)}-${pad(local.getDate())}`;
-      return orderStr === selectedStr;
+      // Convertir a hora Perú (UTC-5) directamente con toLocaleDateString
+      const orderStr = d.toLocaleDateString('es-PE', {
+        timeZone: 'America/Lima',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      // orderStr viene como "17/04/2026", convertir a "2026-04-17"
+      const [day, month, year] = orderStr.split('/');
+      const orderDateStr = `${year}-${month}-${day}`;
+      return orderDateStr === selectedStr;
     });
   }
 
   getTodayOrders(): Order[] {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
-    const today = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+    const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
     return this.orders$.value.filter(o => {
       const d = new Date(o.createdAt);
-      const local = new Date(d.getTime() + (-5 * 60 - d.getTimezoneOffset()) * 60000);
-      const orderDate = `${local.getFullYear()}-${pad(local.getMonth()+1)}-${pad(local.getDate())}`;
-      return orderDate === today;
+      const orderStr = d.toLocaleDateString('es-PE', {
+        timeZone: 'America/Lima',
+        year: 'numeric', month: '2-digit', day: '2-digit'
+      });
+      const [day, month, year] = orderStr.split('/');
+      return `${year}-${month}-${day}` === today;
     });
   }
 
