@@ -1,0 +1,274 @@
+<div class="menus-page">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Gestión de Menús</h1>
+      <p class="page-subtitle">Administra categorías y platos del restaurante</p>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn" [class.active]="activeTab === 'categories'" (click)="activeTab = 'categories'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+      Categorías
+      <span class="tab-badge">{{ categories.length }}</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'products'" (click)="activeTab = 'products'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      Platos
+      <span class="tab-badge">{{ products.length }}</span>
+    </button>
+  </div>
+
+  <!-- ══════════════ TAB: CATEGORÍAS ══════════════ -->
+  <div *ngIf="activeTab === 'categories'" class="tab-content">
+    <div class="section-actions">
+      <button class="btn-add" (click)="openCategoryModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        Nueva Categoría
+      </button>
+    </div>
+
+    <div class="cards-grid">
+      <div class="category-card" *ngFor="let cat of categories">
+        <div class="card-order-badge">#{{ cat.sortOrder }}</div>
+        <div class="card-body">
+          <h3 class="card-title">{{ cat.name }}</h3>
+          <p class="card-desc">{{ cat.description || 'Sin descripción' }}</p>
+          <div class="card-meta">
+            <span class="meta-pill">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+              {{ cat.productCount }} plato{{ cat.productCount !== 1 ? 's' : '' }}
+            </span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="btn-icon edit" (click)="openCategoryModal(cat)" title="Editar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="btn-icon delete" (click)="confirmDelete('category', cat.id, cat.name)" title="Eliminar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="empty-state" *ngIf="categories.length === 0">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+        <p>No hay categorías aún</p>
+        <button class="btn-add small" (click)="openCategoryModal()">Crear primera categoría</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ TAB: PLATOS ══════════════ -->
+  <div *ngIf="activeTab === 'products'" class="tab-content">
+    <div class="section-actions">
+      <button class="btn-add" (click)="openProductModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        Nuevo Plato
+      </button>
+    </div>
+
+    <div class="products-table-wrap">
+      <table class="products-table" *ngIf="products.length > 0">
+        <thead>
+          <tr>
+            <th>Imagen</th>
+            <th>Nombre</th>
+            <th>Categoría</th>
+            <th>Precio</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of products" [class.inactive-row]="!p.isActive">
+            <td>
+              <div class="product-thumb">
+                <img *ngIf="p.imageUrl" [src]="p.imageUrl" [alt]="p.name" (error)="p.imageUrl = ''">
+                <div class="no-image" *ngIf="!p.imageUrl">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="product-name">{{ p.name }}</div>
+              <div class="product-desc">{{ p.description }}</div>
+            </td>
+            <td>
+              <span class="category-tag">{{ p.categoryName }}</span>
+            </td>
+            <td class="price-cell">S/. {{ p.price.toFixed(2) }}</td>
+            <td>
+              <button class="status-toggle" [class.active]="p.isActive" (click)="toggleActive(p)">
+                {{ p.isActive ? 'Activo' : 'Inactivo' }}
+              </button>
+            </td>
+            <td>
+              <div class="actions-cell">
+                <button class="btn-icon edit" (click)="openProductModal(p)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="btn-icon delete" (click)="confirmDelete('product', p.id, p.name)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="empty-state" *ngIf="products.length === 0">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <p>No hay platos registrados</p>
+        <button class="btn-add small" (click)="openProductModal()">Agregar primer plato</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL CATEGORÍA ══════════════ -->
+<div class="modal-overlay" *ngIf="showCategoryModal" (click)="showCategoryModal = false">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ editingCategory ? 'Editar Categoría' : 'Nueva Categoría' }}</h2>
+      <button class="modal-close" (click)="showCategoryModal = false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nombre *</label>
+        <input type="text" [(ngModel)]="categoryForm.name" placeholder="Ej: Guisos, Fritos, Mariscos..." class="form-input" autofocus>
+      </div>
+      <div class="form-group">
+        <label>Descripción</label>
+        <input type="text" [(ngModel)]="categoryForm.description" placeholder="Descripción breve" class="form-input">
+      </div>
+      <div class="form-group">
+        <label>Orden de aparición</label>
+        <input type="number" [(ngModel)]="categoryForm.sortOrder" min="1" class="form-input small">
+      </div>
+      <div class="form-error" *ngIf="categoryError">{{ categoryError }}</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="showCategoryModal = false">Cancelar</button>
+      <button class="btn-save" (click)="saveCategory()" [disabled]="loading">
+        {{ loading ? 'Guardando...' : (editingCategory ? 'Actualizar' : 'Crear') }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL PLATO ══════════════ -->
+<div class="modal-overlay" *ngIf="showProductModal" (click)="showProductModal = false">
+  <div class="modal modal-wide" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ editingProduct ? 'Editar Plato' : 'Nuevo Plato' }}</h2>
+      <button class="modal-close" (click)="showProductModal = false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body modal-two-col">
+
+      <!-- Columna izquierda: formulario -->
+      <div class="form-col">
+        <div class="form-group">
+          <label>Nombre *</label>
+          <input type="text" [(ngModel)]="productForm.name" placeholder="Ej: Ceviche mixto" class="form-input"
+            (ngModelChange)="unsplashQuery = $event">
+        </div>
+        <div class="form-group">
+          <label>Descripción</label>
+          <input type="text" [(ngModel)]="productForm.description" placeholder="Ingredientes o descripción" class="form-input">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Precio (S/.) *</label>
+            <input type="number" [(ngModel)]="productForm.price" min="0" step="0.50" class="form-input">
+          </div>
+          <div class="form-group">
+            <label>Categoría *</label>
+            <select [(ngModel)]="productForm.categoryId" class="form-input">
+              <option [value]="0" disabled>Seleccionar...</option>
+              <option *ngFor="let cat of categories" [value]="cat.id">{{ cat.name }}</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Preview imagen seleccionada -->
+        <div class="image-preview-wrap" *ngIf="productForm.imageUrl">
+          <label>Imagen seleccionada</label>
+          <div class="image-preview">
+            <img [src]="productForm.imageUrl" alt="preview">
+            <button class="remove-image" (click)="productForm.imageUrl = ''">✕</button>
+          </div>
+        </div>
+
+        <div class="form-error" *ngIf="productError">{{ productError }}</div>
+      </div>
+
+      <!-- Columna derecha: buscador Unsplash -->
+      <div class="unsplash-col">
+        <label class="unsplash-label">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 6.75V0h9v6.75h-9zm9 3.75H24V24H0V10.5h7.5v6.75h9V10.5z"/></svg>
+          Buscar imagen en Unsplash
+        </label>
+        <div class="unsplash-search">
+          <input type="text" [(ngModel)]="unsplashQuery" placeholder="Buscar..." class="form-input"
+            (keyup.enter)="searchUnsplash()">
+          <button class="btn-search" (click)="searchUnsplash()" [disabled]="unsplashLoading">
+            {{ unsplashLoading ? '...' : 'Buscar' }}
+          </button>
+        </div>
+
+        <div class="unsplash-grid" *ngIf="unsplashResults.length > 0">
+          <div class="unsplash-photo" *ngFor="let photo of unsplashResults"
+            [class.selected]="productForm.imageUrl === photo.urls.regular"
+            (click)="selectPhoto(photo)">
+            <img [src]="photo.urls.small" [alt]="photo.alt_description">
+            <div class="photo-overlay" *ngIf="productForm.imageUrl === photo.urls.regular">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="unsplash-empty" *ngIf="unsplashSearched && unsplashResults.length === 0 && !unsplashLoading">
+          No se encontraron imágenes
+        </div>
+        <div class="unsplash-hint" *ngIf="!unsplashSearched">
+          Escribe el nombre del plato y presiona Buscar
+        </div>
+
+        <p class="unsplash-credit" *ngIf="unsplashResults.length > 0">Fotos de <a href="https://unsplash.com" target="_blank">Unsplash</a></p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="showProductModal = false">Cancelar</button>
+      <button class="btn-save" (click)="saveProduct()" [disabled]="loading">
+        {{ loading ? 'Guardando...' : (editingProduct ? 'Actualizar' : 'Crear') }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL CONFIRMAR ELIMINAR ══════════════ -->
+<div class="modal-overlay" *ngIf="deleteConfirm" (click)="deleteConfirm = null">
+  <div class="modal modal-small" (click)="$event.stopPropagation()">
+    <div class="modal-header danger">
+      <h2>Confirmar eliminación</h2>
+    </div>
+    <div class="modal-body">
+      <p class="delete-message">
+        ¿Estás seguro que deseas eliminar <strong>{{ deleteConfirm?.name }}</strong>?
+        <span *ngIf="deleteConfirm?.type === 'category'"> Esta acción no se puede deshacer si no tiene platos asociados.</span>
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="deleteConfirm = null">Cancelar</button>
+      <button class="btn-delete" (click)="executeDelete()">Eliminar</button>
+    </div>
+  </div>
+</div>
