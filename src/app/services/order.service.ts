@@ -3,24 +3,36 @@ import * as signalR from '@microsoft/signalr';
 import { BehaviorSubject } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 
-// const API_URL = 'http://localhost:5245';
-const API_URL = 'https://app-restaurant-api.onrender.com';
+// const API_URL = 'https://app-restaurant-api.onrender.com';
+const API_URL = 'http://localhost:5245';
+
 
 export interface OrderHistoryEntry {
   id: number;
   orderId: number;
   createdAt: string;
-  action: string;   // 'Inicial' | 'Agregado' | 'Modificado' | 'Cancelado'
+  action: string;
   itemsAdded: string;
+  roundNumber?: number; // ✅ NUEVO
 }
 
 export interface OrderHistoryItem {
   productId: number;
   productName?: string;
   quantity: number;
-  oldQuantity?: number;   // para acción "Modificado"
+  oldQuantity?: number;
   unitPrice: number;
   product?: { id: number; name: string };
+}
+
+// ✅ Modificación/cancelación fusionada dentro de una ronda
+export interface RoundChange {
+  action: 'Modificado' | 'Cancelado';
+  productId: number;
+  productName: string;
+  oldQuantity?: number;
+  newQuantity: number;
+  createdAt: string;
 }
 
 export interface OrderRound {
@@ -29,8 +41,9 @@ export interface OrderRound {
   createdAt: string;
   items: OrderHistoryItem[];
   isLatest: boolean;
-  isCancelled: boolean;   // true = ronda de cancelación
-  isModified: boolean;    // true = ronda de modificación
+  isCancelled: boolean;
+  isModified: boolean;
+  changes?: RoundChange[]; // ✅ modificaciones/cancelaciones fusionadas
 }
 
 export interface Order {
@@ -42,10 +55,11 @@ export interface Order {
   status: string;
   createdAt: string;
   comanda: string;
-  waiterName?: string;   // ← AGREGAR ESTA LÍNEA
+  waiterName?: string;
   rounds?: OrderRound[];
   hasMultipleRounds?: boolean;
   updatedAt?: string;
+  entradas?: string;
 }
 
 export interface OrderItem {
@@ -76,12 +90,7 @@ export class OrderService {
     });
   }
 
-  private resolveProductName(
-    productId: number,
-    orderItems: OrderItem[],
-    inlineProduct?: { id?: number; name?: string } | null,
-    inlineName?: string
-  ): string {
+  private resolveProductName(productId: number, orderItems: OrderItem[], inlineProduct?: any, inlineName?: string): string {
     if (inlineName) return inlineName;
     if (inlineProduct?.name) return inlineProduct.name;
     if (this.productCache.has(productId)) return this.productCache.get(productId)!;
@@ -95,7 +104,6 @@ export class OrderService {
       .withUrl(`${API_URL}/hubs/orders`)
       .withAutomaticReconnect()
       .build();
-
     this.hubConnection.on('NuevoPedido', () => this.loadOrders());
     this.hubConnection.on('PedidoListo', () => this.loadOrders());
     this.hubConnection.on('ActualizacionPedido', () => this.loadOrders());
@@ -129,83 +137,112 @@ export class OrderService {
   private buildRounds(history: OrderHistoryEntry[], order: Order): OrderRound[] {
     if (!history || history.length === 0) {
       return [{
-        roundNumber: 1,
-        action: 'Inicial',
-        createdAt: order.createdAt,
+        roundNumber: 1, action: 'Inicial', createdAt: order.createdAt,
         items: order.items.map(i => ({
-          productId: i.productId,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice,
+          productId: i.productId, quantity: i.quantity, unitPrice: i.unitPrice,
           product: { id: i.productId, name: this.resolveProductName(i.productId, order.items, i.product) }
         })),
-        isLatest: false,
-        isCancelled: false,
-        isModified: false
+        isLatest: false, isCancelled: false, isModified: false, changes: []
       }];
     }
 
-    // Cuántas rondas "normales" hay (Inicial + Agregado)
-    const normalRounds = history.filter(h => h.action === 'Inicial' || h.action === 'Agregado').length;
+    // ✅ Separar entradas normales de modificaciones/cancelaciones
+    const normalEntries = history.filter(h => h.action === 'Inicial' || h.action === 'Agregado');
+    const changeEntries = history.filter(h => h.action === 'Modificado' || h.action === 'Cancelado');
 
-    return history.map((entry, index) => {
+    // ✅ Construir mapa: roundNumber -> RoundChange[]
+    const changesByRound = new Map<number, RoundChange[]>();
+
+    for (const entry of changeEntries) {
       let rawItems: any[] = [];
       try {
         const parsed = JSON.parse(entry.itemsAdded);
         if (Array.isArray(parsed)) rawItems = parsed;
       } catch { rawItems = []; }
 
-      const isCancelled = entry.action === 'Cancelado';
-      const isModified = entry.action === 'Modificado';
+      // roundNumber del backend (nuevo) o fallback: buscar en cuál ronda normal estaba el producto
+      for (const raw of rawItems) {
+        const productId: number = raw.productId ?? raw.ProductId ?? 0;
+        const quantity: number = raw.quantity ?? raw.Quantity ?? 1;
+        const oldQty: number | undefined = raw.oldQuantity ?? raw.OldQuantity ?? undefined;
+        const name: string = raw.productName ?? raw.ProductName ??
+          this.resolveProductName(productId, order.items);
+
+        // Usar roundNumber del backend si existe, sino buscar manualmente
+        let targetRound = entry.roundNumber ?? this.findRoundForProduct(productId, normalEntries);
+
+        const change: RoundChange = {
+          action: entry.action as 'Modificado' | 'Cancelado',
+          productId,
+          productName: name,
+          oldQuantity: oldQty,
+          newQuantity: quantity,
+          createdAt: entry.createdAt
+        };
+
+        if (!changesByRound.has(targetRound)) changesByRound.set(targetRound, []);
+        changesByRound.get(targetRound)!.push(change);
+      }
+    }
+
+    // ✅ Construir rondas normales con sus changes fusionados
+    const rounds: OrderRound[] = normalEntries.map((entry, idx) => {
+      let rawItems: any[] = [];
+      try {
+        const parsed = JSON.parse(entry.itemsAdded);
+        if (Array.isArray(parsed)) rawItems = parsed;
+      } catch { rawItems = []; }
+
+      const roundNumber = idx + 1;
+      const isLatest = normalEntries.length > 1 && idx === normalEntries.length - 1;
 
       const items: OrderHistoryItem[] = rawItems.map((raw: any) => {
         const productId: number = raw.productId ?? raw.ProductId ?? 0;
         const quantity: number = raw.quantity ?? raw.Quantity ?? 1;
-        const oldQuantity = raw.oldQuantity ?? raw.OldQuantity ?? undefined;
         const unitPrice: number = raw.unitPrice ?? raw.UnitPrice ?? 0;
         const inlineName: string = raw.productName ?? raw.ProductName ?? '';
         const inlineProduct = raw.product ?? raw.Product ?? null;
         const name = this.resolveProductName(productId, order.items, inlineProduct, inlineName);
-
-        return { productId, quantity, oldQuantity, unitPrice, product: { id: productId, name } };
+        return { productId, quantity, unitPrice, product: { id: productId, name } };
       });
 
-      // isLatest: solo aplica para rondas de adición (Inicial/Agregado)
-      const isLatestNormal =
-        (entry.action === 'Inicial' || entry.action === 'Agregado') &&
-        normalRounds > 1 &&
-        index === history.map((h, i) => ({ h, i }))
-          .filter(x => x.h.action === 'Inicial' || x.h.action === 'Agregado')
-          .at(-1)?.i;
-
       return {
-        roundNumber: index + 1,
+        roundNumber,
         action: entry.action,
         createdAt: entry.createdAt,
         items,
-        isLatest: !!isLatestNormal,
-        isCancelled,
-        isModified
+        isLatest,
+        isCancelled: false,
+        isModified: false,
+        changes: changesByRound.get(roundNumber) ?? []
       };
     });
+
+    return rounds;
+  }
+
+  // Fallback: buscar en qué ronda normal apareció primero un producto
+  private findRoundForProduct(productId: number, normalEntries: OrderHistoryEntry[]): number {
+    for (let i = 0; i < normalEntries.length; i++) {
+      try {
+        const items = JSON.parse(normalEntries[i].itemsAdded);
+        if (Array.isArray(items) && items.some((it: any) =>
+          (it.productId ?? it.ProductId) === productId)) {
+          return i + 1;
+        }
+      } catch { }
+    }
+    return 1; // fallback a ronda 1
   }
 
   getOrdersByDate(date: Date): Order[] {
     const pad = (n: number) => String(n).padStart(2, '0');
     const selectedStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-
     return this.orders$.value.filter(order => {
       const d = new Date(order.createdAt);
-      // Convertir a hora Perú (UTC-5) directamente con toLocaleDateString
-      const orderStr = d.toLocaleDateString('es-PE', {
-        timeZone: 'America/Lima',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
-      // orderStr viene como "17/04/2026", convertir a "2026-04-17"
+      const orderStr = d.toLocaleDateString('es-PE', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' });
       const [day, month, year] = orderStr.split('/');
-      const orderDateStr = `${year}-${month}-${day}`;
-      return orderDateStr === selectedStr;
+      return `${year}-${month}-${day}` === selectedStr;
     });
   }
 
@@ -213,13 +250,9 @@ export class OrderService {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-
     return this.orders$.value.filter(o => {
       const d = new Date(o.createdAt);
-      const orderStr = d.toLocaleDateString('es-PE', {
-        timeZone: 'America/Lima',
-        year: 'numeric', month: '2-digit', day: '2-digit'
-      });
+      const orderStr = d.toLocaleDateString('es-PE', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' });
       const [day, month, year] = orderStr.split('/');
       return `${year}-${month}-${day}` === today;
     });
@@ -238,11 +271,9 @@ export class OrderService {
 
   updateOrderStatus(orderId: number, status: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.http.put<void>(
-        `${API_URL}/api/order/${orderId}/status`,
-        JSON.stringify(status),
-        { headers: { 'Content-Type': 'application/json' } }
-      ).subscribe({ next: () => resolve(), error: reject });
+      this.http.put<void>(`${API_URL}/api/order/${orderId}/status`, JSON.stringify(status),
+        { headers: { 'Content-Type': 'application/json' } })
+        .subscribe({ next: () => resolve(), error: reject });
     });
   }
 

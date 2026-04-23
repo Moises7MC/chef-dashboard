@@ -4,7 +4,7 @@
   <div class="page-header">
     <div>
       <h1 class="page-title">Gestión de Menús</h1>
-      <p class="page-subtitle">Administra categorías y platos del restaurante</p>
+      <p class="page-subtitle">Administra categorías, platos y entradas del restaurante</p>
     </div>
   </div>
 
@@ -19,6 +19,11 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
       Platos
       <span class="tab-badge">{{ products.length }}</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'entradas'" (click)="activeTab = 'entradas'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+      Entradas del día
+      <span class="tab-badge">{{ entradas.length }}</span>
     </button>
   </div>
 
@@ -97,9 +102,7 @@
               <div class="product-name">{{ p.name }}</div>
               <div class="product-desc">{{ p.description }}</div>
             </td>
-            <td>
-              <span class="category-tag">{{ p.categoryName }}</span>
-            </td>
+            <td><span class="category-tag">{{ p.categoryName }}</span></td>
             <td class="price-cell">S/. {{ p.price.toFixed(2) }}</td>
             <td>
               <button class="status-toggle" [class.active]="p.isActive" (click)="toggleActive(p)">
@@ -126,6 +129,80 @@
         <button class="btn-add small" (click)="openProductModal()">Agregar primer plato</button>
       </div>
     </div>
+  </div>
+
+  <!-- ══════════════ TAB: ENTRADAS DEL DÍA ══════════════ -->
+  <div *ngIf="activeTab === 'entradas'" class="tab-content">
+
+    <!-- Fecha de hoy -->
+    <div class="entradas-date-bar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      <span>{{ getTodayLabel() }}</span>
+    </div>
+
+    <!-- Agregar nueva entrada -->
+    <div class="entrada-add-row">
+      <input
+        type="text"
+        [(ngModel)]="newEntradaName"
+        placeholder="Ej: Caldo de gallina, Ensalada rusa..."
+        class="form-input entrada-input"
+        (keyup.enter)="addEntrada()"
+        maxlength="80">
+      <button class="btn-add" (click)="addEntrada()" [disabled]="entradaLoading">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        {{ entradaLoading ? 'Agregando...' : 'Agregar' }}
+      </button>
+    </div>
+    <div class="form-error" *ngIf="entradaError">{{ entradaError }}</div>
+
+    <!-- Lista de entradas del día -->
+    <div class="entradas-list" *ngIf="entradas.length > 0">
+      <div class="entrada-item" *ngFor="let entrada of entradas">
+
+        <!-- Modo edición -->
+        <ng-container *ngIf="editingEntrada?.id === entrada.id">
+          <div class="entrada-edit-row">
+            <input
+              type="text"
+              [(ngModel)]="editEntradaName"
+              class="form-input entrada-input"
+              (keyup.enter)="saveEditEntrada()"
+              (keyup.escape)="cancelEditEntrada()"
+              autofocus>
+            <button class="btn-save-small" (click)="saveEditEntrada()">Guardar</button>
+            <button class="btn-cancel-small" (click)="cancelEditEntrada()">Cancelar</button>
+          </div>
+        </ng-container>
+
+        <!-- Modo vista -->
+        <ng-container *ngIf="editingEntrada?.id !== entrada.id">
+          <div class="entrada-info">
+            <div class="entrada-dot"></div>
+            <span class="entrada-name">{{ entrada.name }}</span>
+          </div>
+          <div class="entrada-actions">
+            <button class="btn-icon edit" (click)="startEditEntrada(entrada)" title="Editar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="btn-icon delete" (click)="deleteEntrada(entrada)" title="Eliminar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </button>
+          </div>
+        </ng-container>
+
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty-state" *ngIf="entradas.length === 0">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+      <p>No hay entradas definidas para hoy</p>
+      <p style="font-size:12px; color:#aaa;">Agrega las entradas que se ofrecerán hoy</p>
+    </div>
+
   </div>
 </div>
 
@@ -172,8 +249,6 @@
       </button>
     </div>
     <div class="modal-body modal-two-col">
-
-      <!-- Columna izquierda: formulario -->
       <div class="form-col">
         <div class="form-group">
           <label>Nombre *</label>
@@ -197,8 +272,6 @@
             </select>
           </div>
         </div>
-
-        <!-- Preview imagen seleccionada -->
         <div class="image-preview-wrap" *ngIf="productForm.imageUrl">
           <label>Imagen seleccionada</label>
           <div class="image-preview">
@@ -206,11 +279,8 @@
             <button class="remove-image" (click)="productForm.imageUrl = ''">✕</button>
           </div>
         </div>
-
         <div class="form-error" *ngIf="productError">{{ productError }}</div>
       </div>
-
-      <!-- Columna derecha: buscador Unsplash -->
       <div class="unsplash-col">
         <label class="unsplash-label">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 6.75V0h9v6.75h-9zm9 3.75H24V24H0V10.5h7.5v6.75h9V10.5z"/></svg>
@@ -223,7 +293,6 @@
             {{ unsplashLoading ? '...' : 'Buscar' }}
           </button>
         </div>
-
         <div class="unsplash-grid" *ngIf="unsplashResults.length > 0">
           <div class="unsplash-photo" *ngFor="let photo of unsplashResults"
             [class.selected]="productForm.imageUrl === photo.urls.regular"
@@ -234,14 +303,12 @@
             </div>
           </div>
         </div>
-
         <div class="unsplash-empty" *ngIf="unsplashSearched && unsplashResults.length === 0 && !unsplashLoading">
           No se encontraron imágenes
         </div>
         <div class="unsplash-hint" *ngIf="!unsplashSearched">
           Escribe el nombre del plato y presiona Buscar
         </div>
-
         <p class="unsplash-credit" *ngIf="unsplashResults.length > 0">Fotos de <a href="https://unsplash.com" target="_blank">Unsplash</a></p>
       </div>
     </div>

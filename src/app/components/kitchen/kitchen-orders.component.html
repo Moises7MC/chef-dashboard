@@ -33,26 +33,20 @@
     </div>
   </div>
 
-  <!-- GRID DE CARDS -->
+  <!-- GRID -->
   <div class="grid">
     <div *ngFor="let order of filteredOrders" class="card" [class.card-multi-round]="order.hasMultipleRounds">
 
       <!-- ENCABEZADO -->
       <div class="card-header">
         <span class="card-id">Mesa {{ order.tableNumber }}</span>
-        <!-- <span class="card-id">Mesa {{ order.tableNumber }} — Comanda {{ order.comanda }}</span> -->
         <div class="card-badges">
-          <span class="badge" [ngClass]="getBadgeClass(order.status)">
-            {{ getStatusLabel(order.status) }}
-          </span>
-          <span *ngIf="order.hasMultipleRounds" class="badge-rounds">
-            +{{ order.rounds!.length }} rondas
-          </span>
+          <span class="badge" [ngClass]="getBadgeClass(order.status)">{{ getStatusLabel(order.status) }}</span>
+          <span *ngIf="order.hasMultipleRounds" class="badge-rounds">+{{ order.rounds!.length }} rondas</span>
         </div>
       </div>
 
-      <!-- ✅ CRONÓMETRO -->
-      <!-- ✅ CRONÓMETRO -->
+      <!-- CRONÓMETRO -->
       <div style="display:flex; align-items:center;">
         <div class="timer-wrap" [ngClass]="getTimerClass(order.createdAt, order.status, order.updatedAt)">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -94,6 +88,14 @@
           </svg>
           {{ order.waiterName }}
         </div>
+        <!-- Entradas -->
+        <div class="meta-row" *ngIf="order.entradas">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
+            <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
+          </svg>
+          {{ order.entradas }}
+        </div>
         <div class="total-row">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="1" x2="12" y2="23" />
@@ -111,67 +113,64 @@
 
           <div class="section-label">Productos por ronda</div>
 
-          <div *ngFor="let round of order.rounds" class="round-block"
-            [class.round-old]="!round.isLatest && !round.isCancelled && !round.isModified"
-            [class.round-new]="round.isLatest" [class.round-cancelled]="round.isCancelled"
-            [class.round-modified]="round.isModified">
+          <div *ngFor="let round of order.rounds" class="round-block" [class.round-old]="!round.isLatest"
+            [class.round-new]="round.isLatest" [class.round-has-changes]="round.changes && round.changes.length > 0">
 
-            <div class="round-header"
-              [class.round-header-old]="!round.isLatest && !round.isCancelled && !round.isModified"
-              [class.round-header-new]="round.isLatest" [class.round-header-cancelled]="round.isCancelled"
-              [class.round-header-modified]="round.isModified">
-
+            <!-- Cabecera -->
+            <div class="round-header" [class.round-header-old]="!round.isLatest"
+              [class.round-header-new]="round.isLatest">
               <div class="round-header-left">
-                <div class="round-dot" [class.dot-old]="!round.isLatest && !round.isCancelled && !round.isModified"
-                  [class.dot-new]="round.isLatest" [class.dot-cancelled]="round.isCancelled"
-                  [class.dot-modified]="round.isModified">
-                </div>
+                <div class="round-dot" [class.dot-old]="!round.isLatest" [class.dot-new]="round.isLatest"></div>
                 <span>
-                  <ng-container *ngIf="!round.isCancelled && !round.isModified">
-                    Ronda {{ round.roundNumber }}
-                    <span class="round-status" *ngIf="!round.isLatest"> — enviado</span>
-                    <span class="round-status-new" *ngIf="round.isLatest"> — recién llegó</span>
-                  </ng-container>
-                  <ng-container *ngIf="round.isCancelled">Cancelación</ng-container>
-                  <ng-container *ngIf="round.isModified">Modificación</ng-container>
+                  Ronda {{ round.roundNumber }}
+                  <span class="round-status" *ngIf="!round.isLatest"> — enviado</span>
+                  <span class="round-status-new" *ngIf="round.isLatest"> — recién llegó</span>
                 </span>
               </div>
               <span class="round-time">{{ formatTime(round.createdAt) }}</span>
             </div>
 
+            <!-- Items normales -->
             <div class="round-items">
-              <ng-container *ngIf="!round.isCancelled && !round.isModified">
-                <div *ngFor="let item of round.items" class="item-row">
-                  <span class="item-qty" [class.item-qty-new]="round.isLatest">{{ item.quantity }}x</span>
-                  <span class="item-name">{{ getProductName(item) }}</span>
-                  <span *ngIf="round.isLatest" class="item-new-badge">nuevo</span>
-                </div>
-              </ng-container>
-
-              <ng-container *ngIf="round.isCancelled">
-                <div *ngFor="let item of round.items" class="item-row item-row-cancelled">
-                  <span class="item-qty item-qty-cancelled">{{ item.quantity }}x</span>
-                  <span class="item-name item-name-cancelled">{{ getProductName(item) }}</span>
-                  <span class="item-cancelled-badge">cancelado</span>
-                </div>
-              </ng-container>
-
-              <ng-container *ngIf="round.isModified">
-                <div *ngFor="let item of round.items" class="item-row item-row-modified">
-                  <span class="item-qty item-qty-modified">{{ item.quantity }}x</span>
-                  <span class="item-name">{{ getProductName(item) }}</span>
-                  <div class="item-modified-info">
-                    <span class="old-qty" *ngIf="item.oldQuantity !== undefined">era {{ item.oldQuantity }}x</span>
-                    <span class="item-modified-badge">modificado</span>
-                  </div>
-                </div>
-              </ng-container>
-
-              <div *ngIf="round.items.length === 0" class="item-row">
-                <span style="color: #aaa; font-size: 11px;">Sin detalle</span>
+              <div *ngFor="let item of round.items" class="item-row">
+                <span class="item-qty" [class.item-qty-new]="round.isLatest">{{ item.quantity }}x</span>
+                <span class="item-name">{{ getProductName(item) }}</span>
+                <span *ngIf="round.isLatest" class="item-new-badge">nuevo</span>
               </div>
+
+              <!-- ✅ Cambios (modificaciones/cancelaciones) fusionados dentro de la ronda -->
+              <ng-container *ngIf="round.changes && round.changes.length > 0">
+                <div class="changes-divider">
+                  <span class="changes-label">✏️ cambios</span>
+                </div>
+                <div *ngFor="let change of round.changes" class="item-row change-row"
+                  [class.change-row-modified]="change.action === 'Modificado'"
+                  [class.change-row-cancelled]="change.action === 'Cancelado'">
+
+                  <!-- Modificado -->
+                  <ng-container *ngIf="change.action === 'Modificado'">
+                    <span class="item-qty item-qty-modified">{{ change.newQuantity }}x</span>
+                    <span class="item-name">{{ change.productName }}</span>
+                    <div class="item-modified-info">
+                      <span class="old-qty" *ngIf="change.oldQuantity !== undefined">era {{ change.oldQuantity
+                        }}x</span>
+                      <span class="item-modified-badge">modificado</span>
+                    </div>
+                  </ng-container>
+
+                  <!-- Cancelado -->
+                  <ng-container *ngIf="change.action === 'Cancelado'">
+                    <span class="item-qty item-qty-cancelled">{{ change.newQuantity }}x</span>
+                    <span class="item-name item-name-cancelled">{{ change.productName }}</span>
+                    <span class="item-cancelled-badge">cancelado</span>
+                  </ng-container>
+
+                </div>
+              </ng-container>
+
             </div>
           </div>
+
         </ng-container>
 
         <ng-template #flatItems>
@@ -186,20 +185,15 @@
       <!-- ACCIONES -->
       <div class="card-actions">
         <button *ngIf="order.status === 'Enviado a cocina' || order.status === 'Pendiente'" class="btn btn-green"
-          (click)="markAsReady(order.id)">
-          ✓ Marcar como listo
-        </button>
+          (click)="markAsReady(order.id)">✓ Marcar como listo</button>
         <ng-container *ngIf="order.status === 'Listo'">
           <button class="btn btn-green btn-done" disabled>Listo para entregar</button>
-          <button class="btn btn-blue" (click)="downloadComprobante(order.id)">
-            Descargar Comprobante
-          </button>
+          <button class="btn btn-blue" (click)="downloadComprobante(order.id)">Descargar Comprobante</button>
         </ng-container>
         <button *ngIf="order.status === 'Cancelado'" class="btn btn-outline" disabled>Cancelado</button>
       </div>
 
     </div>
-
     <div *ngIf="filteredOrders.length === 0" class="empty">Sin pedidos para mostrar</div>
   </div>
 </div>

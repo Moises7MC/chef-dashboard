@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpClientModule, HttpHeaders } from '@angular/common/http';
@@ -30,6 +30,14 @@ interface UnsplashPhoto {
   links: { download_location: string };
 }
 
+interface DailyEntrada {
+  id: number;
+  name: string;
+  date: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
 @Component({
   selector: 'app-menus',
   standalone: true,
@@ -38,11 +46,12 @@ interface UnsplashPhoto {
   styleUrls: ['./menus.css']
 })
 export class MenusComponent implements OnInit {
-  // private apiUrl = 'http://localhost:5245/api';
-  private apiUrl = 'https://app-restaurant-api.onrender.com/api'; // ✅ CORRECTO
+  // private apiUrl = 'https://app-restaurant-api.onrender.com/api';
+  private apiUrl = 'http://localhost:5245/api';
+
   private unsplashKey = 'GZOeZzgY8sguV5Lb_exuWp4_nqvGfLD6T5eSQARgGpU';
 
-  activeTab: 'categories' | 'products' = 'categories';
+  activeTab: 'categories' | 'products' | 'entradas' = 'categories';
 
   // Categorías
   categories: Category[] = [];
@@ -67,6 +76,14 @@ export class MenusComponent implements OnInit {
   unsplashLoading = false;
   unsplashSearched = false;
 
+  // Entradas del día
+  entradas: DailyEntrada[] = [];
+  newEntradaName = '';
+  entradaError = '';
+  entradaLoading = false;
+  editingEntrada: DailyEntrada | null = null;
+  editEntradaName = '';
+
   // UI
   loading = false;
   deleteConfirm: { type: 'category' | 'product'; id: number; name: string } | null = null;
@@ -76,6 +93,7 @@ export class MenusComponent implements OnInit {
   ngOnInit() {
     this.loadCategories();
     this.loadProducts();
+    this.loadEntradas();
   }
 
   // ─── CATEGORÍAS ──────────────────────────────────────────────
@@ -196,12 +214,72 @@ export class MenusComponent implements OnInit {
 
   selectPhoto(photo: UnsplashPhoto) {
     this.productForm.imageUrl = photo.urls.regular;
-    // Trigger download como requiere Unsplash
     const headers = new HttpHeaders({ Authorization: `Client-ID ${this.unsplashKey}` });
     this.http.get(photo.links.download_location, { headers }).subscribe();
   }
 
   getCategoryName(id: number): string {
     return this.categories.find(c => c.id === id)?.name || '';
+  }
+
+  // ─── ENTRADAS DEL DÍA ─────────────────────────────────────────
+  loadEntradas() {
+    this.http.get<DailyEntrada[]>(`${this.apiUrl}/entrada`).subscribe({
+      next: (data) => this.entradas = data,
+      error: (e) => console.error(e)
+    });
+  }
+
+  addEntrada() {
+    if (!this.newEntradaName.trim()) {
+      this.entradaError = 'Escribe un nombre para la entrada';
+      return;
+    }
+    this.entradaLoading = true;
+    this.entradaError = '';
+    this.http.post<DailyEntrada>(`${this.apiUrl}/entrada`, { name: this.newEntradaName.trim() }).subscribe({
+      next: (nueva) => {
+        this.entradas.push(nueva);
+        this.newEntradaName = '';
+        this.entradaLoading = false;
+      },
+      error: () => { this.entradaError = 'Error al agregar entrada'; this.entradaLoading = false; }
+    });
+  }
+
+  startEditEntrada(entrada: DailyEntrada) {
+    this.editingEntrada = entrada;
+    this.editEntradaName = entrada.name;
+  }
+
+  saveEditEntrada() {
+    if (!this.editingEntrada || !this.editEntradaName.trim()) return;
+    this.http.put<DailyEntrada>(`${this.apiUrl}/entrada/${this.editingEntrada.id}`, { name: this.editEntradaName.trim() }).subscribe({
+      next: (updated) => {
+        const idx = this.entradas.findIndex(e => e.id === updated.id);
+        if (idx !== -1) this.entradas[idx] = updated;
+        this.editingEntrada = null;
+        this.editEntradaName = '';
+      },
+      error: () => { this.entradaError = 'Error al editar'; }
+    });
+  }
+
+  cancelEditEntrada() {
+    this.editingEntrada = null;
+    this.editEntradaName = '';
+  }
+
+  deleteEntrada(entrada: DailyEntrada) {
+    this.http.delete(`${this.apiUrl}/entrada/${entrada.id}`).subscribe({
+      next: () => this.entradas = this.entradas.filter(e => e.id !== entrada.id),
+      error: () => { this.entradaError = 'Error al eliminar'; }
+    });
+  }
+
+  getTodayLabel(): string {
+    return new Date().toLocaleDateString('es-PE', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
   }
 }
