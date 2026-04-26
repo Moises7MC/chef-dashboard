@@ -1,0 +1,238 @@
+<div class="vd-page">
+
+  <!-- TOP BAR -->
+  <div class="vd-topbar">
+    <div class="vd-topbar-left">
+      <h1>Venta Directa</h1>
+      <span class="vd-badge-llevar">Para llevar</span>
+    </div>
+    <div class="vd-topbar-right">
+      <select [(ngModel)]="mealType" class="vd-select">
+        <option *ngFor="let m of mealTypes" [value]="m">{{ m }}</option>
+      </select>
+      <div class="vd-search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" [(ngModel)]="searchQuery" (input)="applyFilters()" placeholder="Buscar producto..." />
+      </div>
+    </div>
+  </div>
+
+  <!-- SUCCESS TOAST -->
+  <div class="vd-toast" *ngIf="successMessage">{{ successMessage }}</div>
+
+  <!-- BODY -->
+  <div class="vd-body">
+
+    <!-- PANEL IZQUIERDO -->
+    <div class="vd-left">
+
+      <!-- Categorías -->
+      <div class="vd-cats">
+        <button class="vd-cat" [class.active]="selectedCategoryId === null" (click)="selectCategory(null)">
+          Todos
+        </button>
+        <button *ngFor="let cat of categories" class="vd-cat"
+          [class.active]="selectedCategoryId === cat.id"
+          (click)="selectCategory(cat.id)">
+          {{ cat.name }}
+        </button>
+        <button *ngIf="showEntradasTab" class="vd-cat vd-cat-entradas"
+          [class.active]="selectedCategoryId === -1"
+          (click)="selectCategory(-1)">
+          🥣 Entradas
+        </button>
+      </div>
+
+      <!-- Productos normales -->
+      <div class="vd-products" *ngIf="selectedCategoryId !== -1">
+        <div *ngFor="let product of filteredProducts" class="vd-product-card" (click)="addToCart(product)">
+          <div class="vd-product-img">
+            <img *ngIf="product.imageUrl" [src]="product.imageUrl" [alt]="product.name"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+            <div class="vd-product-emoji" [style.display]="product.imageUrl ? 'none' : 'flex'">🍽️</div>
+          </div>
+          <div class="vd-product-info">
+            <span class="vd-product-name">{{ product.name }}</span>
+            <span class="vd-product-price">S/. {{ product.price.toFixed(2) }}</span>
+          </div>
+          <div class="vd-product-qty" *ngIf="getQuantity(product.id) > 0">{{ getQuantity(product.id) }}</div>
+          <div class="vd-product-add">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </div>
+        </div>
+        <div *ngIf="filteredProducts.length === 0" class="vd-empty-products">Sin productos para mostrar</div>
+      </div>
+
+      <!-- Panel de entradas -->
+      <div class="vd-products" *ngIf="selectedCategoryId === -1">
+        <div *ngFor="let entrada of entradas" class="vd-product-card vd-product-card-entrada" (click)="addEntrada(entrada)">
+          <div class="vd-product-img">
+            <div class="vd-product-emoji" style="display:flex">🥣</div>
+          </div>
+          <div class="vd-product-info">
+            <span class="vd-product-name">{{ entrada.name }}</span>
+            <span class="vd-product-price vd-entrada-label">Entrada del día</span>
+          </div>
+          <div class="vd-product-qty vd-product-qty-entrada" *ngIf="getEntradasQuantity(entrada.id) > 0">
+            {{ getEntradasQuantity(entrada.id) }}
+          </div>
+          <div class="vd-product-add vd-product-add-entrada">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </div>
+        </div>
+        <div *ngIf="entradas.length === 0" class="vd-empty-products">No hay entradas del día registradas</div>
+      </div>
+
+    </div>
+
+    <!-- PANEL DERECHO: Carrito -->
+    <div class="vd-right">
+      <div class="vd-cart">
+
+        <div class="vd-cart-header">
+          <span class="vd-cart-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+            </svg>
+            Pedido
+          </span>
+          <button class="vd-clear-btn" *ngIf="cart.length > 0 || selectedEntradas.length > 0" (click)="clearCart()">Limpiar</button>
+        </div>
+
+        <!-- Entradas seleccionadas -->
+        <div class="vd-cart-entradas" *ngIf="selectedEntradas.length > 0">
+          <div class="vd-cart-entradas-label">🥣 Entradas</div>
+          <div *ngFor="let e of selectedEntradas" class="vd-cart-item">
+            <div class="vd-cart-item-name" style="color:#7c3aed">{{ e.entrada.name }}</div>
+            <div class="vd-cart-item-controls">
+              <button class="vd-qty-btn" (click)="removeEntrada(e.entrada.id)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+              </button>
+              <span class="vd-qty">{{ e.quantity }}</span>
+              <button class="vd-qty-btn" (click)="addEntrada(e.entrada)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="vd-cart-entradas-divider" *ngIf="cart.length > 0"></div>
+        </div>
+
+        <!-- Items del carrito -->
+        <div class="vd-cart-items" *ngIf="cart.length > 0">
+          <div *ngFor="let item of cart" class="vd-cart-item">
+            <div class="vd-cart-item-name">{{ item.product.name }}</div>
+            <div class="vd-cart-item-controls">
+              <button class="vd-qty-btn" (click)="removeOne(item.product.id)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+              </button>
+              <span class="vd-qty">{{ item.quantity }}</span>
+              <button class="vd-qty-btn" (click)="addToCart(item.product)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+              </button>
+              <span class="vd-item-total">S/. {{ (item.product.price * item.quantity).toFixed(2) }}</span>
+              <button class="vd-remove-btn" (click)="removeItem(item.product.id)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                  <path d="M10 11v6"/><path d="M14 11v6"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Carrito vacío -->
+        <div class="vd-cart-empty" *ngIf="cart.length === 0 && selectedEntradas.length === 0">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5">
+            <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+          </svg>
+          <span>Agrega productos al pedido</span>
+        </div>
+
+        <!-- Footer -->
+        <div class="vd-cart-footer" *ngIf="cart.length > 0 || selectedEntradas.length > 0">
+          <div class="vd-total-row">
+            <span>{{ totalItems }} producto{{ totalItems !== 1 ? 's' : '' }}</span>
+            <span class="vd-total-amount">S/. {{ total.toFixed(2) }}</span>
+          </div>
+          <button class="vd-btn-enviar" (click)="openConfirm()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/>
+            </svg>
+            Enviar a cocina
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CONFIRMAR -->
+  <div class="vd-modal-overlay" *ngIf="showConfirmModal" (click)="showConfirmModal = false">
+    <div class="vd-modal" (click)="$event.stopPropagation()">
+      <h2>Confirmar pedido</h2>
+      <p class="vd-modal-sub">Para llevar · {{ mealType }}</p>
+      <div class="vd-modal-items">
+        <div *ngIf="entradasText" class="vd-modal-item">
+          <span class="vd-modal-qty" style="background:#ede9fe; color:#7c3aed">🥣</span>
+          <span class="vd-modal-name" style="color:#7c3aed; font-style:italic">{{ entradasText }}</span>
+        </div>
+        <div *ngFor="let item of cart" class="vd-modal-item">
+          <span class="vd-modal-qty">{{ item.quantity }}x</span>
+          <span class="vd-modal-name">{{ item.product.name }}</span>
+          <span class="vd-modal-price">S/. {{ (item.product.price * item.quantity).toFixed(2) }}</span>
+        </div>
+      </div>
+      <div class="vd-modal-total">
+        <span>Total</span>
+        <span>S/. {{ total.toFixed(2) }}</span>
+      </div>
+      <div class="vd-modal-actions">
+        <button class="vd-btn-cancel" (click)="showConfirmModal = false">Cancelar</button>
+        <button class="vd-btn-confirm" (click)="confirmarYEnviar()" [disabled]="procesando">
+          {{ procesando ? 'Enviando...' : '✓ Enviar a cocina' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL COBRAR -->
+  <div class="vd-modal-overlay" *ngIf="showCobrarModal">
+    <div class="vd-modal">
+      <div class="vd-modal-success-icon">✓</div>
+      <h2>Pedido enviado a cocina</h2>
+      <p class="vd-modal-sub">Selecciona el método de pago</p>
+      <div class="vd-payment-grid">
+        <button *ngFor="let m of paymentMethods" class="vd-payment-btn"
+          [class.selected]="selectedPaymentMethod === m"
+          (click)="selectedPaymentMethod = m">
+          <span class="vd-payment-icon">{{ getPaymentIcon(m) }}</span>
+          <span>{{ m }}</span>
+        </button>
+      </div>
+      <div class="vd-modal-total">
+        <span>Total a cobrar</span>
+        <span>S/. {{ total.toFixed(2) }}</span>
+      </div>
+      <button class="vd-btn-cobrar" (click)="cobrarOrden()" [disabled]="procesando">
+        {{ procesando ? 'Procesando...' : '💵 Cobrar S/. ' + total.toFixed(2) }}
+      </button>
+    </div>
+  </div>
+
+</div>

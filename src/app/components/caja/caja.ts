@@ -42,8 +42,8 @@ interface Summary {
   styleUrls: ['./caja.css']
 })
 export class CajaComponent implements OnInit, OnDestroy {
-  // private apiUrl = 'http://localhost:5245/api';
-  private apiUrl = 'https://app-restaurant-api.onrender.com/api';
+  private apiUrl = 'http://localhost:5245/api';
+  // private apiUrl = 'https://app-restaurant-api.onrender.com/api';
   private hubConnection: signalR.HubConnection | null = null;
 
   // Datos

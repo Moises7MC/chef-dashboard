@@ -112,7 +112,7 @@
 
 /* ══ RONDAS ════════════════════════════════════ */
 .section-label {
-  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  font-size: 12px; font-weight: bold; text-transform: uppercase;
   letter-spacing: 0.6px; color: #aaa; margin-bottom: 6px;
 }
 
@@ -296,3 +296,139 @@
 .change-row { border-radius: 6px; padding: 2px 4px; }
 .change-row-modified { background: #f5f3ff; }
 .change-row-cancelled { background: #fff5f5; }
+
+/* ══ CARD COLORES POR TIEMPO ══ */
+.card-time-green {
+  background: #d1fae5 !important;
+  border-color: #6ee7b7 !important;
+}
+.card-time-orange {
+  background: #fff7ed !important;
+  border-color: #fdba74 !important;
+}
+.card-time-red {
+  background: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+}
+
+/* ── Textos generales ── */
+.card-time-green .card-id,
+.card-time-green .meta-row,
+.card-time-green .meta-row svg,
+.card-time-green .total-row,
+.card-time-green .section-label,
+.card-time-green .round-time,
+.card-time-green .item-name,
+.card-time-green .item-row,
+.card-time-green .item-row-flat { color: #065f46 !important; }
+
+.card-time-orange .card-id,
+.card-time-orange .meta-row,
+.card-time-orange .meta-row svg,
+.card-time-orange .total-row,
+.card-time-orange .section-label,
+.card-time-orange .round-time,
+.card-time-orange .item-name,
+.card-time-orange .item-row,
+.card-time-orange .item-row-flat { color: #7c2d12 !important; }
+
+.card-time-red .card-id,
+.card-time-red .meta-row,
+.card-time-red .meta-row svg,
+.card-time-red .total-row,
+.card-time-red .section-label,
+.card-time-red .round-time,
+.card-time-red .item-name,
+.card-time-red .item-row,
+.card-time-red .item-row-flat { color: #7f1d1d !important; }
+
+/* ── Bloques de ronda internos ── */
+.card-time-green .round-old { background: #a7f3d0; border-color: #6ee7b7; }
+.card-time-green .round-new { background: #bbf7d0; border-color: #34d399; }
+.card-time-green .round-header-old,
+.card-time-green .round-header-new,
+.card-time-green .round-status,
+.card-time-green .round-status-new { color: #065f46 !important; }
+
+.card-time-orange .round-old { background: #fed7aa; border-color: #fdba74; }
+.card-time-orange .round-new { background: #ffedd5; border-color: #fb923c; }
+.card-time-orange .round-header-old,
+.card-time-orange .round-header-new,
+.card-time-orange .round-status,
+.card-time-orange .round-status-new { color: #7c2d12 !important; }
+
+.card-time-red .round-old { background: #fecaca; border-color: #fca5a5; }
+.card-time-red .round-new { background: #fee2e2; border-color: #f87171; }
+.card-time-red .round-header-old,
+.card-time-red .round-header-new,
+.card-time-red .round-status,
+.card-time-red .round-status-new { color: #7f1d1d !important; }
+
+/* ── Divider y cambios internos ── */
+.card-time-green .divider { background: #6ee7b7; }
+.card-time-orange .divider { background: #fdba74; }
+.card-time-red .divider { background: #fca5a5; }
+
+.card-time-green .changes-divider { border-top-color: #6ee7b7; }
+.card-time-orange .changes-divider { border-top-color: #fdba74; }
+.card-time-red .changes-divider { border-top-color: #fca5a5; }
+
+/* ── item-qty badge neutral dentro de card de color ── */
+.card-time-green .item-qty { background: #6ee7b7; color: #064e3b; }
+.card-time-orange .item-qty { background: #fdba74; color: #7c2d12; }
+.card-time-red .item-qty { background: #fca5a5; color: #7f1d1d; }
+
+.badge-llevar { background: #ede9fe; color: #7c3aed; }
+
+.card-time-purple {
+  background: #f5f3ff !important;
+  border-color: #c4b5fd !important;
+}
+.card-time-purple .card-id,
+.card-time-purple .meta-row,
+.card-time-purple .total-row,
+.card-time-purple .section-label,
+.card-time-purple .round-header,
+.card-time-purple .item-row,
+.card-time-purple .item-row-flat { color: #6d28d9 !important; }
+.card-time-purple .round-old { background: #ede9fe; border-color: #c4b5fd; }
+.card-time-purple .round-new { background: #ddd6fe; border-color: #a78bfa; }
+.card-time-purple .divider { background: #c4b5fd; }
+.card-time-purple .item-qty { background: #c4b5fd; color: #4c1d95; }
+
+/* Entradas box según color de card */
+.card-time-green .entradas-box { background: #a7f3d0; border-color: #6ee7b7; }
+.card-time-green .entradas-box-label { color: #065f46; }
+.card-time-green .entradas-box-content { color: #064e3b; }
+
+.card-time-orange .entradas-box { background: #fed7aa; border-color: #fdba74; }
+.card-time-orange .entradas-box-label { color: #7c2d12; }
+.card-time-orange .entradas-box-content { color: #7c2d12; }
+
+.card-time-red .entradas-box { background: #fecaca; border-color: #fca5a5; }
+.card-time-red .entradas-box-label { color: #7f1d1d; }
+.card-time-red .entradas-box-content { color: #7f1d1d; }
+
+.card-time-purple .entradas-box { background: #ddd6fe; border-color: #c4b5fd; }
+.card-time-purple .entradas-box-label { color: #4c1d95; }
+.card-time-purple .entradas-box-content { color: #4c1d95; }
+
+.entradas-box {
+  border: 1px solid #ddd6fe;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: #f5f3ff;
+}
+.entradas-box-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #7c3aed;
+  margin-bottom: 3px;
+}
+.entradas-box-content {
+  font-size: 12px;
+  color: #4c1d95;
+  font-weight: 500;
+}

@@ -60,6 +60,7 @@ export interface Order {
   hasMultipleRounds?: boolean;
   updatedAt?: string;
   entradas?: string;
+  isParaLlevar?: boolean;
 }
 
 export interface OrderItem {
@@ -235,16 +236,19 @@ export class OrderService {
     return 1; // fallback a ronda 1
   }
 
-  getOrdersByDate(date: Date): Order[] {
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const selectedStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-    return this.orders$.value.filter(order => {
-      const d = new Date(order.createdAt);
-      const orderStr = d.toLocaleDateString('es-PE', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' });
-      const [day, month, year] = orderStr.split('/');
-      return `${year}-${month}-${day}` === selectedStr;
+getOrdersByDate(date: Date): Order[] {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const selectedStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  return this.orders$.value.filter(order => {
+    const d = new Date(order.createdAt);
+    const orderStr = d.toLocaleDateString('es-PE', { 
+      timeZone: 'America/Lima', 
+      year: 'numeric', month: '2-digit', day: '2-digit' 
     });
-  }
+    const [day, month, year] = orderStr.split('/');
+    return `${year}-${month}-${day}` === selectedStr;
+  });
+}
 
   getTodayOrders(): Order[] {
     const now = new Date();

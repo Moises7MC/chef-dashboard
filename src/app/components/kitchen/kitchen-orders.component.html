@@ -35,13 +35,21 @@
 
   <!-- GRID -->
   <div class="grid">
-    <div *ngFor="let order of filteredOrders" class="card" [class.card-multi-round]="order.hasMultipleRounds">
+    <div *ngFor="let order of filteredOrders" class="card" [class.card-multi-round]="order.hasMultipleRounds"
+      [ngClass]="getCardTimeClass(order.createdAt, order.status, order.updatedAt, order.tableNumber, order.isParaLlevar)">
 
       <!-- ENCABEZADO -->
       <div class="card-header">
-        <span class="card-id">Mesa {{ order.tableNumber }}</span>
+        <!-- <span class="card-id">{{ order.tableNumber === 0 ? 'Para llevar' : 'Mesa ' + order.tableNumber }}</span> -->
+        <span class="card-id">
+          {{ order.tableNumber === 0 ? 'Para llevar' :
+          order.isParaLlevar ? 'Mesa ' + order.tableNumber + ' — Para llevar' :
+          'Mesa ' + order.tableNumber }}
+        </span>
         <div class="card-badges">
-          <span class="badge" [ngClass]="getBadgeClass(order.status)">{{ getStatusLabel(order.status) }}</span>
+          <span class="badge" [ngClass]="getBadgeClass(order.status, order.tableNumber, order.isParaLlevar)">
+            {{ (order.tableNumber === 0 || order.isParaLlevar) ? 'Para llevar' : getStatusLabel(order.status) }}
+          </span>
           <span *ngIf="order.hasMultipleRounds" class="badge-rounds">+{{ order.rounds!.length }} rondas</span>
         </div>
       </div>
@@ -89,12 +97,9 @@
           {{ order.waiterName }}
         </div>
         <!-- Entradas -->
-        <div class="meta-row" *ngIf="order.entradas">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
-            <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
-          </svg>
-          {{ order.entradas }}
+        <div class="entradas-box-label">Entradas</div>
+        <div class="entradas-box" *ngIf="order.entradas && order.entradas.trim().length > 0">
+          <div class="entradas-box-content">{{ order.entradas }}</div>
         </div>
         <div class="total-row">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -111,7 +116,7 @@
       <div class="rounds-section">
         <ng-container *ngIf="order.rounds && order.rounds.length > 0; else flatItems">
 
-          <div class="section-label">Productos por ronda</div>
+          <div class="section-label">Segundos</div>
 
           <div *ngFor="let round of order.rounds" class="round-block" [class.round-old]="!round.isLatest"
             [class.round-new]="round.isLatest" [class.round-has-changes]="round.changes && round.changes.length > 0">

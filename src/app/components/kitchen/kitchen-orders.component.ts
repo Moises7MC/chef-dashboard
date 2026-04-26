@@ -25,18 +25,18 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
   activeFilter: string = 'all';
 
   filterOptions = [
-    { key: 'all',              label: 'Todos'      },
-    { key: 'Enviado a cocina', label: 'Nuevo'      },
-    { key: 'Pendiente',        label: 'Preparando' },
-    { key: 'Listo',            label: 'Listo'      },
-    { key: 'Cancelado',        label: 'Cancelado'  },
+    { key: 'all', label: 'Todos' },
+    { key: 'Enviado a cocina', label: 'Nuevo' },
+    { key: 'Pendiente', label: 'Preparando' },
+    { key: 'Listo', label: 'Listo' },
+    { key: 'Cancelado', label: 'Cancelado' },
   ];
 
   // Cronómetro
   private _timerInterval: any;
   now: number = Date.now();
 
-  constructor(private orderService: OrderService, private auth: AuthService) {}
+  constructor(private orderService: OrderService, private auth: AuthService) { }
 
   ngOnInit(): void {
     this.orderService.loadOrders().then(() => this.applyFiltersLocal());
@@ -65,14 +65,16 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
   }
 
   applyFiltersLocal(): void {
-    const date = new Date(this.selectedDate + 'T12:00:00');
+    const [year, month, day] = this.selectedDate.split('-').map(Number);
+    const date = new Date(year, month - 1, day); // fecha local sin timezone
     let orders = this.orderService.getOrdersByDate(date);
     if (this.activeFilter !== 'all') {
       orders = orders.filter(o => o.status === this.activeFilter);
     }
     if (this.searchQuery.trim()) {
       const q = this.searchQuery.toLowerCase();
-      orders = orders.filter(o => o.tableNumber.toString().includes(q));
+      orders = orders.filter(o => o.tableNumber.toString().includes(q) ||
+        (o.tableNumber === 0 && 'llevar'.includes(q)));
     }
     this.allOrders = this.orderService.getOrdersByDate(date);
     this.filteredOrders = orders;
@@ -98,15 +100,16 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     return map[status] ?? status;
   }
 
-  getBadgeClass(status: string): string {
-    const map: Record<string, string> = {
-      'Enviado a cocina': 'badge-new',
-      'Pendiente': 'badge-pending',
-      'Listo': 'badge-ready',
-      'Cancelado': 'badge-cancelled',
-    };
-    return map[status] ?? '';
-  }
+getBadgeClass(status: string, tableNumber?: number, isParaLlevar?: boolean): string {
+  if (tableNumber === 0 || isParaLlevar) return 'badge-llevar';
+  const map: Record<string, string> = {
+    'Enviado a cocina': 'badge-new',
+    'Pendiente': 'badge-pending',
+    'Listo': 'badge-ready',
+    'Cancelado': 'badge-cancelled',
+  };
+  return map[status] ?? '';
+}
 
   formatTime(isoString: string): string {
     return new Date(isoString).toLocaleTimeString('es-PE', {
@@ -127,30 +130,30 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
   // ── Cronómetro ──────────────────────────────────────────────
 
   getElapsedSeconds(createdAt: string, status?: string, updatedAt?: string): number {
-  const end = (status === 'Listo' || status === 'Cancelado') && updatedAt
-    ? new Date(updatedAt).getTime()
-    : this.now;
-  return Math.floor((end - new Date(createdAt).getTime()) / 1000);
-}
+    const end = (status === 'Listo' || status === 'Cancelado') && updatedAt
+      ? new Date(updatedAt).getTime()
+      : this.now;
+    return Math.floor((end - new Date(createdAt).getTime()) / 1000);
+  }
 
- formatElapsed(createdAt: string, status?: string, updatedAt?: string): string {
-  const secs = this.getElapsedSeconds(createdAt, status, updatedAt);
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  const s = secs % 60;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  if (h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`;
-  return `${pad(m)}:${pad(s)}`;
-}
+  formatElapsed(createdAt: string, status?: string, updatedAt?: string): string {
+    const secs = this.getElapsedSeconds(createdAt, status, updatedAt);
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    if (h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`;
+    return `${pad(m)}:${pad(s)}`;
+  }
 
   // Verde 0-10 min, naranja 10-20, rojo 20+, gris si listo/cancelado
-getTimerClass(createdAt: string, status: string, updatedAt?: string): string {
-  if (status === 'Listo' || status === 'Cancelado') return 'timer-done';
-  const mins = this.getElapsedSeconds(createdAt, status, updatedAt) / 60;
-  if (mins < 10) return 'timer-green';
-  if (mins < 20) return 'timer-orange';
-  return 'timer-red';
-}
+  getTimerClass(createdAt: string, status: string, updatedAt?: string): string {
+    if (status === 'Listo' || status === 'Cancelado') return 'timer-done';
+    const mins = this.getElapsedSeconds(createdAt, status, updatedAt) / 60;
+    if (mins < 10) return 'timer-green';
+    if (mins < 20) return 'timer-orange';
+    return 'timer-red';
+  }
 
   markAsReady(orderId: number): void {
     this.orderService.updateOrderStatus(orderId, 'Listo').then(() => {
@@ -162,5 +165,18 @@ getTimerClass(createdAt: string, status: string, updatedAt?: string): string {
     this.orderService.downloadComprobante(orderId).catch(() => {
       alert('Error al descargar comprobante');
     });
+  }
+
+  getCardTimeClass(createdAt: string, status: string, updatedAt?: string, tableNumber?: number, isParaLlevar?: boolean): string {
+  if (status === 'Listo' || status === 'Cancelado') return '';
+  if (tableNumber === 0 || isParaLlevar) return 'card-time-purple';
+  const mins = this.getElapsedSeconds(createdAt, status, updatedAt) / 60;
+  if (mins < 8) return 'card-time-green';
+  if (mins < 15) return 'card-time-orange';
+  return 'card-time-red';
+}
+
+  isParaLlevar(order: Order): boolean {
+    return order.tableNumber === 0;
   }
 }
