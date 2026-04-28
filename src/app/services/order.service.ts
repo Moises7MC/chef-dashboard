@@ -108,6 +108,8 @@ export class OrderService {
     this.hubConnection.on('NuevoPedido', () => this.loadOrders());
     this.hubConnection.on('PedidoListo', () => this.loadOrders());
     this.hubConnection.on('ActualizacionPedido', () => this.loadOrders());
+    // ✅ También escuchar el evento que emite el backend cuando cambia el status
+    this.hubConnection.on('OrderStatusChanged', () => this.loadOrders());
   }
 
   loadOrders(): Promise<void> {
@@ -271,7 +273,14 @@ getOrdersByDate(date: Date): Order[] {
 
   disconnect(): Promise<void> { return this.hubConnection!.stop(); }
   joinKitchenGroup(): Promise<void> { return this.hubConnection!.invoke('JoinKitchenGroup'); }
-  markOrderAsReady(orderId: number): Promise<void> { return this.hubConnection!.invoke('OrderReady', orderId); }
+
+  // ✅ ELIMINADA la llamada SignalR errónea.
+  //    El backend al recibir el PUT de updateOrderStatus ya emite los eventos
+  //    automáticamente a todos los clientes conectados (cocina, mozos, cantadores).
+  //    No hace falta invocar nada más desde el cliente.
+  markOrderAsReady(orderId: number): Promise<void> {
+    return Promise.resolve();
+  }
 
   updateOrderStatus(orderId: number, status: string): Promise<void> {
     return new Promise((resolve, reject) => {

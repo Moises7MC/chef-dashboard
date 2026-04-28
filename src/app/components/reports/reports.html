@@ -1,0 +1,183 @@
+<div class="reports-page">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">📊 Reportes de Ventas</h1>
+      <p class="page-subtitle">{{ formatRange() }}</p>
+    </div>
+  </div>
+
+  <!-- FILTROS DE FECHA -->
+  <div class="date-filters">
+    <button class="date-btn" [class.active]="selectedRange === 'today'" (click)="applyPreset('today')">Hoy</button>
+    <button class="date-btn" [class.active]="selectedRange === 'yesterday'" (click)="applyPreset('yesterday')">Ayer</button>
+    <button class="date-btn" [class.active]="selectedRange === 'thisWeek'" (click)="applyPreset('thisWeek')">Esta semana</button>
+    <button class="date-btn" [class.active]="selectedRange === 'thisMonth'" (click)="applyPreset('thisMonth')">Este mes</button>
+    <button class="date-btn" [class.active]="selectedRange === 'custom'" (click)="applyPreset('custom')">Rango personalizado</button>
+  </div>
+
+  <!-- RANGO PERSONALIZADO -->
+  <div class="custom-range" *ngIf="selectedRange === 'custom'">
+    <label>Desde
+      <input type="date" [(ngModel)]="customFrom" class="form-input">
+    </label>
+    <label>Hasta
+      <input type="date" [(ngModel)]="customTo" class="form-input">
+    </label>
+    <button class="btn-apply" (click)="applyCustomRange()">Aplicar</button>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    Cargando reportes...
+  </div>
+
+  <!-- CONTENIDO -->
+  <ng-container *ngIf="!loading">
+
+    <!-- SUMMARY CARDS -->
+    <div class="summary-cards">
+      <div class="summary-card platos">
+        <div class="summary-icon">🍽</div>
+        <div class="summary-info">
+          <span class="summary-label">Platos vendidos</span>
+          <span class="summary-value">{{ summary.totalPlatos }}</span>
+          <span class="summary-meta">{{ summary.totalOrders }} órden{{ summary.totalOrders !== 1 ? 'es' : '' }}</span>
+        </div>
+      </div>
+
+      <div class="summary-card ingresos">
+        <div class="summary-icon">💰</div>
+        <div class="summary-info">
+          <span class="summary-label">Ingresos</span>
+          <span class="summary-value">S/. {{ summary.totalIngresos.toFixed(2) }}</span>
+          <span class="summary-meta">cobrados</span>
+        </div>
+      </div>
+
+      <div class="summary-card promedio">
+        <div class="summary-icon">📊</div>
+        <div class="summary-info">
+          <span class="summary-label">Ticket promedio</span>
+          <span class="summary-value">S/. {{ summary.ticketPromedio.toFixed(2) }}</span>
+          <span class="summary-meta">por mesa</span>
+        </div>
+      </div>
+
+      <div class="summary-card estrella">
+        <div class="summary-icon">🔝</div>
+        <div class="summary-info">
+          <span class="summary-label">Plato estrella</span>
+          <span class="summary-value-small" [title]="summary.platoEstrella">{{ summary.platoEstrella }}</span>
+          <span class="summary-meta">{{ summary.platoEstrellaCantidad }} unid.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn" [class.active]="activeTab === 'category'" (click)="activeTab = 'category'">
+        🗂 Por Categoría
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'product'" (click)="activeTab = 'product'">
+        🍽 Por Producto
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'waiter'" (click)="activeTab = 'waiter'">
+        👤 Por Mozo
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'hour'" (click)="activeTab = 'hour'">
+        🕐 Por Hora
+      </button>
+    </div>
+
+    <!-- TAB: CATEGORÍA -->
+    <div class="tab-content" *ngIf="activeTab === 'category'">
+      <div class="empty-state" *ngIf="categories.length === 0">
+        <p>No hay ventas en este rango</p>
+      </div>
+      <div class="category-list" *ngIf="categories.length > 0">
+        <div class="category-row" *ngFor="let cat of categories">
+          <div class="row-header">
+            <div class="row-name-block">
+              <span class="row-name">{{ cat.categoryName }}</span>
+              <span class="row-meta">{{ cat.quantity }} unid.</span>
+            </div>
+            <div class="row-totals">
+              <span class="row-total">S/. {{ cat.total.toFixed(2) }}</span>
+              <span class="row-pct">{{ cat.percentage }}%</span>
+            </div>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill" [style.width.%]="cat.percentage"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: PRODUCTO -->
+    <div class="tab-content" *ngIf="activeTab === 'product'">
+      <div class="empty-state" *ngIf="products.length === 0">
+        <p>No hay productos vendidos en este rango</p>
+      </div>
+      <div class="product-list" *ngIf="products.length > 0">
+        <div class="product-row" *ngFor="let p of products; let i = index">
+          <div class="rank">{{ rankBadge(i) }}</div>
+          <div class="product-info">
+            <span class="product-name">{{ p.productName }}</span>
+            <span class="product-cat">{{ p.categoryName }} · S/. {{ p.unitPrice.toFixed(2) }} c/u</span>
+            <div class="bar-track-mini">
+              <div class="bar-fill-mini" [style.width.%]="(p.quantity / productMaxQty()) * 100"></div>
+            </div>
+          </div>
+          <div class="product-stats">
+            <span class="product-qty">{{ p.quantity }}</span>
+            <span class="product-qty-label">unid.</span>
+            <span class="product-total">S/. {{ p.total.toFixed(2) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: MOZO -->
+    <div class="tab-content" *ngIf="activeTab === 'waiter'">
+      <div class="empty-state" *ngIf="waiters.length === 0">
+        <p>No hay ventas asignadas a mozos en este rango</p>
+      </div>
+      <div class="waiter-list" *ngIf="waiters.length > 0">
+        <div class="waiter-row" *ngFor="let w of waiters; let i = index">
+          <div class="rank">{{ rankBadge(i) }}</div>
+          <div class="waiter-info">
+            <span class="waiter-name">{{ w.waiterName }}</span>
+            <span class="waiter-meta">{{ w.ordersCount }} órden{{ w.ordersCount !== 1 ? 'es' : '' }} · {{ w.totalPlatos }} platos</span>
+            <div class="bar-track-mini">
+              <div class="bar-fill-mini blue" [style.width.%]="(w.total / waiterMaxTotal()) * 100"></div>
+            </div>
+          </div>
+          <div class="waiter-total">S/. {{ w.total.toFixed(2) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: HORA -->
+    <div class="tab-content" *ngIf="activeTab === 'hour'">
+      <div class="empty-state" *ngIf="hours.length === 0">
+        <p>No hay datos por hora en este rango</p>
+      </div>
+      <div class="hour-chart" *ngIf="hours.length > 0">
+        <div class="hour-row" *ngFor="let h of hours">
+          <span class="hour-label">{{ h.label }}</span>
+          <div class="bar-track-hour">
+            <div class="bar-fill-hour" [style.width.%]="(h.total / hourMaxTotal()) * 100">
+              <span *ngIf="(h.total / hourMaxTotal()) * 100 > 25" class="bar-text">S/. {{ h.total.toFixed(2) }}</span>
+            </div>
+            <span *ngIf="(h.total / hourMaxTotal()) * 100 <= 25" class="bar-text-out">S/. {{ h.total.toFixed(2) }}</span>
+          </div>
+          <span class="hour-orders">{{ h.ordersCount }} órd. · {{ h.totalPlatos }} platos</span>
+        </div>
+      </div>
+    </div>
+
+  </ng-container>
+</div>

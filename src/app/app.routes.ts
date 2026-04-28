@@ -34,6 +34,11 @@ export const routes: Routes = [
         path: 'caja',
         loadComponent: () => import('./components/caja/caja').then(m => m.CajaComponent)
       },
+      // ✅ NUEVO: Reportes
+      {
+        path: 'reports',
+        loadComponent: () => import('./components/reports/reports').then(m => m.ReportsComponent)
+      },
       {
         path: 'venta-directa',
         loadComponent: () => import('./components/VentaDirecta/ventaDirecta').then(m => m.VentaDirectaComponent)
