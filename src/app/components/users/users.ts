@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 interface Waiter {
   id: number;
@@ -30,8 +31,7 @@ interface WaiterForm {
 })
 export class UsersComponent implements OnInit {
 
-  private readonly API = 'http://localhost:5245/api/waiter';
-  // private readonly API = 'https://app-restaurant-api.onrender.com/api/waiter';
+  private readonly API = `${environment.apiUrl}/waiter`;
 
   waiters: Waiter[] = [];
   loading = false;

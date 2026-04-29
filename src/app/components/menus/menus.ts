@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpClientModule, HttpHeaders } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 interface Category {
   id: number;
@@ -46,8 +47,7 @@ interface DailyEntrada {
   styleUrls: ['./menus.css']
 })
 export class MenusComponent implements OnInit {
-  // private apiUrl = 'https://app-restaurant-api.onrender.com/api';
-  private apiUrl = 'http://localhost:5245/api';
+  private apiUrl = environment.apiUrl;
 
   private unsplashKey = 'GZOeZzgY8sguV5Lb_exuWp4_nqvGfLD6T5eSQARgGpU';
 

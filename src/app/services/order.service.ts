@@ -2,9 +2,9 @@ import { Injectable } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
 import { BehaviorSubject } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../environments/environment';
 
-// const API_URL = 'https://app-restaurant-api.onrender.com';
-const API_URL = 'http://localhost:5245';
+const API_URL = environment.apiBaseUrl;
 
 
 export interface OrderHistoryEntry {

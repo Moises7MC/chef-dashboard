@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpClientModule, HttpParams } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 interface Summary {
   totalOrders: number;
@@ -54,8 +55,7 @@ type DateRangePreset = 'today' | 'yesterday' | 'thisWeek' | 'thisMonth' | 'custo
   styleUrls: ['./reports.css']
 })
 export class ReportsComponent implements OnInit {
-  private apiUrl = 'http://localhost:5245/api';
-  // private apiUrl = 'https://app-restaurant-api.onrender.com/api';
+  private apiUrl = environment.apiUrl;
 
   // ── Filtros ─────────────────────────────────────────────
   selectedRange: DateRangePreset = 'today';

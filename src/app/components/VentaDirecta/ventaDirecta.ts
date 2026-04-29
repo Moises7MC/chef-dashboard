@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 interface Product {
     id: number;
@@ -36,8 +37,7 @@ interface DailyEntrada {
     styleUrls: ['./ventaDirecta.css']
 })
 export class VentaDirectaComponent implements OnInit {
-    private apiUrl = 'http://localhost:5245/api';
-    // private apiUrl = 'https://app-restaurant-api.onrender.com/api';
+    private apiUrl = environment.apiUrl;
 
     categories: Category[] = [];
     products: Product[] = [];
@@ -68,10 +68,10 @@ export class VentaDirectaComponent implements OnInit {
     constructor(private http: HttpClient) { }
 
     ngOnInit() {
-  this.loadCategories();
-  this.loadProducts();
-  this.loadEntradas(); // ← agregar esta línea
-}
+        this.loadCategories();
+        this.loadProducts();
+        this.loadEntradas(); // ← agregar esta línea
+    }
 
     loadCategories() {
         this.http.get<Category[]>(`${this.apiUrl}/category`).subscribe({
@@ -177,9 +177,9 @@ export class VentaDirectaComponent implements OnInit {
     }
 
     clearCart() {
-  this.cart = [];
-  this.selectedEntradas = []; // ← agregar
-}
+        this.cart = [];
+        this.selectedEntradas = []; // ← agregar
+    }
 
     // ── Flujo de venta ───────────────────────────────────────
     openConfirm() {

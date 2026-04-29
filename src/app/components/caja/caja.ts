@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import * as signalR from '@microsoft/signalr';
+import { environment } from '../../../environments/environment';
 
 interface OrdenLista {
   id: number;
@@ -42,8 +43,8 @@ interface Summary {
   styleUrls: ['./caja.css']
 })
 export class CajaComponent implements OnInit, OnDestroy {
-  private apiUrl = 'http://localhost:5245/api';
-  // private apiUrl = 'https://app-restaurant-api.onrender.com/api';
+  private apiUrl = environment.apiUrl;
+  private apiBaseUrl = environment.apiBaseUrl;
   private hubConnection: signalR.HubConnection | null = null;
 
   // Datos
@@ -113,7 +114,7 @@ export class CajaComponent implements OnInit, OnDestroy {
 
   connectSignalR() {
     this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl(`${this.apiUrl.replace('/api', '')}/hubs/orders`)
+      .withUrl(`${this.apiBaseUrl}/hubs/orders`)
       .withAutomaticReconnect()
       .build();
 
