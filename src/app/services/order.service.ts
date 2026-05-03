@@ -20,6 +20,7 @@ export interface OrderHistoryItem {
   productId: number;
   productName?: string;
   quantity: number;
+  servedQuantity?: number; // ← AGREGAR
   oldQuantity?: number;
   unitPrice: number;
   product?: { id: number; name: string };
@@ -61,6 +62,7 @@ export interface Order {
   updatedAt?: string;
   entradas?: string;
   isParaLlevar?: boolean;
+  entradasServidas?: string[]; // ← AGREGAR
 }
 
 export interface OrderItem {
@@ -68,6 +70,7 @@ export interface OrderItem {
   orderId: number;
   productId: number;
   quantity: number;
+  servedQuantity: number; // ← AGREGAR
   unitPrice: number;
   total: number;
   product?: { id: number; name: string };
@@ -105,18 +108,45 @@ export class OrderService {
       .withUrl(`${API_URL}/hubs/orders`)
       .withAutomaticReconnect()
       .build();
-    this.hubConnection.on('NuevoPedido', () => this.loadOrders());
-    this.hubConnection.on('PedidoListo', () => this.loadOrders());
-    this.hubConnection.on('ActualizacionPedido', () => this.loadOrders());
-    // ✅ También escuchar el evento que emite el backend cuando cambia el status
-    this.hubConnection.on('OrderStatusChanged', () => this.loadOrders());
+
+    this.hubConnection.on('NuevoPedido', () => {
+      console.log('🔔 NuevoPedido recibido');
+      this.loadOrders();
+    });
+
+    this.hubConnection.on('PedidoListo', () => {
+      console.log('🔔 PedidoListo recibido');
+      this.loadOrders();
+    });
+
+    this.hubConnection.on('ActualizacionPedido', () => {
+      console.log('🔔 ActualizacionPedido recibido en web!');
+      this.loadOrders();
+    });
+
+    this.hubConnection.on('OrderStatusChanged', () => {
+      console.log('🔔 OrderStatusChanged recibido');
+      this.loadOrders();
+    });
+
+    this.hubConnection.on('ItemServed', () => {
+      console.log('🔔 ItemServed recibido');
+      this.loadOrders();
+    });
+
+    this.hubConnection.on('EntradaServida', () => {
+      console.log('🔔 EntradaServida recibido');
+      this.loadOrders();
+    });
   }
 
   loadOrders(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.http.get<Order[]>(`${API_URL}/api/order`).subscribe({
         next: async (orders) => {
+          console.log('📦 loadOrders - órdenes recibidas:', orders.length);
           const enriched = await Promise.all(orders.map(o => this.enrichOrderWithRounds(o)));
+          console.log('📦 loadOrders - enriched:', enriched.length);
           this.orders$.next(enriched);
           resolve();
         },
@@ -142,7 +172,10 @@ export class OrderService {
       return [{
         roundNumber: 1, action: 'Inicial', createdAt: order.createdAt,
         items: order.items.map(i => ({
-          productId: i.productId, quantity: i.quantity, unitPrice: i.unitPrice,
+          productId: i.productId,
+          quantity: i.quantity,
+          servedQuantity: i.servedQuantity ?? 0, // ← AGREGAR
+          unitPrice: i.unitPrice,
           product: { id: i.productId, name: this.resolveProductName(i.productId, order.items, i.product) }
         })),
         isLatest: false, isCancelled: false, isModified: false, changes: []
@@ -206,9 +239,18 @@ export class OrderService {
         const inlineName: string = raw.productName ?? raw.ProductName ?? '';
         const inlineProduct = raw.product ?? raw.Product ?? null;
         const name = this.resolveProductName(productId, order.items, inlineProduct, inlineName);
-        return { productId, quantity, unitPrice, product: { id: productId, name } };
-      });
 
+        // ✅ AGREGAR: cruzar con order.items para obtener servedQuantity real
+        const realItem = order.items.find(i => i.productId === productId);
+
+        return {
+          productId,
+          quantity,
+          unitPrice,
+          servedQuantity: realItem?.servedQuantity ?? 0, // ✅ ESTO ES LO QUE FALTABA
+          product: { id: productId, name }
+        };
+      });
       return {
         roundNumber,
         action: entry.action,
@@ -238,19 +280,19 @@ export class OrderService {
     return 1; // fallback a ronda 1
   }
 
-getOrdersByDate(date: Date): Order[] {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const selectedStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-  return this.orders$.value.filter(order => {
-    const d = new Date(order.createdAt);
-    const orderStr = d.toLocaleDateString('es-PE', { 
-      timeZone: 'America/Lima', 
-      year: 'numeric', month: '2-digit', day: '2-digit' 
+  getOrdersByDate(date: Date): Order[] {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const selectedStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    return this.orders$.value.filter(order => {
+      const d = new Date(order.createdAt);
+      const orderStr = d.toLocaleDateString('es-PE', {
+        timeZone: 'America/Lima',
+        year: 'numeric', month: '2-digit', day: '2-digit'
+      });
+      const [day, month, year] = orderStr.split('/');
+      return `${year}-${month}-${day}` === selectedStr;
     });
-    const [day, month, year] = orderStr.split('/');
-    return `${year}-${month}-${day}` === selectedStr;
-  });
-}
+  }
 
   getTodayOrders(): Order[] {
     const now = new Date();
@@ -272,7 +314,10 @@ getOrdersByDate(date: Date): Order[] {
   }
 
   disconnect(): Promise<void> { return this.hubConnection!.stop(); }
-  joinKitchenGroup(): Promise<void> { return this.hubConnection!.invoke('JoinKitchenGroup'); }
+  joinKitchenGroup(): Promise<void> {
+    console.log('🏠 Uniéndose al grupo Cocina, estado:', this.hubConnection?.state);
+    return this.hubConnection!.invoke('JoinKitchenGroup');
+  }
 
   // ✅ ELIMINADA la llamada SignalR errónea.
   //    El backend al recibir el PUT de updateOrderStatus ya emite los eventos

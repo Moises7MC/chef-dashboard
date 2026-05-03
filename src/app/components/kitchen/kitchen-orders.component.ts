@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { OrderService, Order } from '../../services/order.service';
@@ -28,15 +28,20 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     { key: 'all', label: 'Todos' },
     { key: 'Enviado a cocina', label: 'Nuevo' },
     { key: 'Pendiente', label: 'Preparando' },
+    { key: 'Demorados', label: 'Demorados' },
     { key: 'Listo', label: 'Listo' },
+    { key: 'Cobrado', label: 'Cobrado' },
     { key: 'Cancelado', label: 'Cancelado' },
   ];
-
   // Cronómetro
   private _timerInterval: any;
   now: number = Date.now();
 
-  constructor(private orderService: OrderService, private auth: AuthService) { }
+  constructor(
+  private orderService: OrderService, 
+  private auth: AuthService,
+  private cdr: ChangeDetectorRef  // ← AGREGAR
+) { }
 
   ngOnInit(): void {
     this.orderService.loadOrders().then(() => this.applyFiltersLocal());
@@ -45,6 +50,7 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     });
     this.orderService.orders$.subscribe(() => {
       this.applyFiltersLocal();
+      this.cdr.detectChanges();
     });
 
     // Tick cada segundo
@@ -66,16 +72,29 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
 
   applyFiltersLocal(): void {
     const [year, month, day] = this.selectedDate.split('-').map(Number);
-    const date = new Date(year, month - 1, day); // fecha local sin timezone
+    const date = new Date(year, month - 1, day);
     let orders = this.orderService.getOrdersByDate(date);
+
     if (this.activeFilter !== 'all') {
-      orders = orders.filter(o => o.status === this.activeFilter);
+      if (this.activeFilter === 'Demorados') {
+        // Filtrar pedidos que tienen más de 15 minutos y no están en estado final
+        orders = orders.filter(o => {
+          const isActive = o.status === 'Enviado a cocina' || o.status === 'Pendiente';
+          if (!isActive) return false;
+          const mins = this.getElapsedSeconds(o.createdAt, o.status, o.updatedAt) / 60;
+          return mins >= 15;
+        });
+      } else {
+        orders = orders.filter(o => o.status === this.activeFilter);
+      }
     }
+
     if (this.searchQuery.trim()) {
       const q = this.searchQuery.toLowerCase();
       orders = orders.filter(o => o.tableNumber.toString().includes(q) ||
         (o.tableNumber === 0 && 'llevar'.includes(q)));
     }
+
     this.allOrders = this.orderService.getOrdersByDate(date);
     this.filteredOrders = orders;
   }
@@ -87,6 +106,16 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
 
   getCounts(key: string): number {
     if (key === 'all') return this.allOrders.length;
+
+    if (key === 'Demorados') {
+      return this.allOrders.filter(o => {
+        const isActive = o.status === 'Enviado a cocina' || o.status === 'Pendiente';
+        if (!isActive) return false;
+        const mins = this.getElapsedSeconds(o.createdAt, o.status, o.updatedAt) / 60;
+        return mins >= 15;
+      }).length;
+    }
+
     return this.allOrders.filter(o => o.status === key).length;
   }
 
@@ -96,20 +125,22 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
       'Pendiente': 'Preparando',
       'Listo': 'Listo',
       'Cancelado': 'Cancelado',
+      'Cobrado': 'Cobrado',
     };
     return map[status] ?? status;
   }
 
-getBadgeClass(status: string, tableNumber?: number, isParaLlevar?: boolean): string {
-  if (tableNumber === 0 || isParaLlevar) return 'badge-llevar';
-  const map: Record<string, string> = {
-    'Enviado a cocina': 'badge-new',
-    'Pendiente': 'badge-pending',
-    'Listo': 'badge-ready',
-    'Cancelado': 'badge-cancelled',
-  };
-  return map[status] ?? '';
-}
+  getBadgeClass(status: string, tableNumber?: number, isParaLlevar?: boolean): string {
+    if (tableNumber === 0 || isParaLlevar) return 'badge-llevar';
+    const map: Record<string, string> = {
+      'Enviado a cocina': 'badge-new',
+      'Pendiente': 'badge-pending',
+      'Listo': 'badge-ready',
+      'Cancelado': 'badge-cancelled',
+      'Cobrado': 'badge-cobrado',
+    };
+    return map[status] ?? '';
+  }
 
   formatTime(isoString: string): string {
     return new Date(isoString).toLocaleTimeString('es-PE', {
@@ -130,7 +161,7 @@ getBadgeClass(status: string, tableNumber?: number, isParaLlevar?: boolean): str
   // ── Cronómetro ──────────────────────────────────────────────
 
   getElapsedSeconds(createdAt: string, status?: string, updatedAt?: string): number {
-    const end = (status === 'Listo' || status === 'Cancelado') && updatedAt
+    const end = (status === 'Listo' || status === 'Cancelado' || status === "Cobrado") && updatedAt
       ? new Date(updatedAt).getTime()
       : this.now;
     return Math.floor((end - new Date(createdAt).getTime()) / 1000);
@@ -148,6 +179,7 @@ getBadgeClass(status: string, tableNumber?: number, isParaLlevar?: boolean): str
 
   // Verde 0-10 min, naranja 10-20, rojo 20+, gris si listo/cancelado
   getTimerClass(createdAt: string, status: string, updatedAt?: string): string {
+    if (status === 'Cobrado') return 'timer-cobrado';
     if (status === 'Listo' || status === 'Cancelado') return 'timer-done';
     const mins = this.getElapsedSeconds(createdAt, status, updatedAt) / 60;
     if (mins < 10) return 'timer-green';
@@ -168,15 +200,88 @@ getBadgeClass(status: string, tableNumber?: number, isParaLlevar?: boolean): str
   }
 
   getCardTimeClass(createdAt: string, status: string, updatedAt?: string, tableNumber?: number, isParaLlevar?: boolean): string {
-  if (status === 'Listo' || status === 'Cancelado') return '';
-  if (tableNumber === 0 || isParaLlevar) return 'card-time-purple';
-  const mins = this.getElapsedSeconds(createdAt, status, updatedAt) / 60;
-  if (mins < 8) return 'card-time-green';
-  if (mins < 15) return 'card-time-orange';
-  return 'card-time-red';
-}
+
+    if (status === 'Cobrado') return 'card-cobrado';
+
+    if (status === 'Listo' || status === 'Cancelado') return '';
+    if (tableNumber === 0 || isParaLlevar) return 'card-time-purple';
+    const mins = this.getElapsedSeconds(createdAt, status, updatedAt) / 60;
+    if (mins < 8) return 'card-time-green';
+    if (mins < 15) return 'card-time-orange';
+    return 'card-time-red';
+  }
 
   isParaLlevar(order: Order): boolean {
     return order.tableNumber === 0;
   }
+
+  getButtonClass(createdAt: string, status: string, updatedAt?: string): string {
+    const mins = this.getElapsedSeconds(createdAt, status, updatedAt) / 60;
+    if (mins < 8) return 'btn-time-green';
+    if (mins < 15) return 'btn-time-orange';
+    return 'btn-time-red';
+  }
+
+  getBadgeBackground(createdAt: string, status: string, updatedAt?: string, tableNumber?: number, isParaLlevar?: boolean): string {
+    // Para llevar siempre púrpura
+    if (tableNumber === 0 || isParaLlevar) return '#8b5cf6';
+
+    // Estados finales
+    if (status === 'Cobrado') return '#eab308';
+    if (status === 'Listo') return '#10b981';
+    if (status === 'Cancelado') return '#ef4444';
+
+    // Estados activos según tiempo
+    const mins = this.getElapsedSeconds(createdAt, status, updatedAt) / 60;
+    if (mins < 8) return '#10b981';  // Verde
+    if (mins < 15) return '#f59e0b'; // Naranja
+    return '#ef4444'; // Rojo
+  }
+
+  getBadgeColor(createdAt: string, status: string, updatedAt?: string, tableNumber?: number, isParaLlevar?: boolean): string {
+    // Para llevar
+    if (tableNumber === 0 || isParaLlevar) return '#fff';
+
+    // Cobrado tiene texto oscuro
+    if (status === 'Cobrado') return '#713f12';
+
+    // Todos los demás tienen texto blanco
+    return '#fff';
+  }
+
+  removeX(entradas: string | null): string {
+    if (!entradas) return '';
+    return entradas.replace(/(\d+)x\s*/gi, '$1 ');
+  }
+
+  parseEntradasList(entradas: string): string[] {
+  if (!entradas) return [];
+  return entradas
+    .replace(/(\d+)x\s*/gi, (_, n) => `${n}x `)
+    .split(',')
+    .map(e => e.trim())
+    .filter(e => e.length > 0);
+}
+
+isEntradaServida(order: Order, entrada: string): boolean {
+  if (!order.entradasServidas) return false;
+  
+  // Si llega como string JSON del backend, parsearlo
+  let servidas: string[] = [];
+  if (typeof order.entradasServidas === 'string') {
+    try {
+      servidas = JSON.parse(order.entradasServidas as string);
+    } catch {
+      return false;
+    }
+  } else {
+    servidas = order.entradasServidas;
+  }
+
+  if (!Array.isArray(servidas)) return false;
+
+  const entradaNorm = entrada.toLowerCase().trim()
+    .replace(/^\d+x\s*/i, '');
+  return servidas.some(s => s.toLowerCase().trim() === entradaNorm);
+}
 }

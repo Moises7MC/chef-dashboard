@@ -54,6 +54,11 @@
 .pill[data-status="Listo"].active { background: #059669; }
 .pill[data-status="Cancelado"].active { background: #dc2626; }
 
+.pill[data-status="Cobrado"].active { 
+  background: #eab308; 
+  color: #713f12;
+}
+
 /* ══ GRID ══════════════════════════════════════ */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
 
@@ -74,7 +79,13 @@
 .card-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .card-id { font-size: 16px; font-weight: 600; color: #111; }
 .card-badges { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-.badge { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 12px; }
+.badge { 
+  font-size: 11px; 
+  font-weight: 700; 
+  padding: 4px 12px; 
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
 .badge-new { background: #dbeafe; color: #1e40af; }
 .badge-pending { background: #fef3c7; color: #92400e; }
 .badge-ready { background: #d1fae5; color: #065f46; }
@@ -431,4 +442,359 @@
   font-size: 12px;
   color: #4c1d95;
   font-weight: 500;
+}
+
+/* ══ CARD COBRADO ══════════════════════════════ */
+.card-cobrado {
+  background: #fef9c3 !important;
+  border-color: #fde047 !important;
+}
+
+/* ── Textos generales ── */
+.card-cobrado .card-id,
+.card-cobrado .meta-row,
+.card-cobrado .meta-row svg,
+.card-cobrado .total-row,
+.card-cobrado .section-label,
+.card-cobrado .round-time,
+.card-cobrado .item-name,
+.card-cobrado .item-row,
+.card-cobrado .item-row-flat { 
+  color: #713f12 !important; 
+}
+
+/* ── Bloques de ronda internos ── */
+.card-cobrado .round-old { 
+  background: #fef08a; 
+  border-color: #fde047; 
+}
+.card-cobrado .round-new { 
+  background: #fef08a; 
+  border-color: #facc15; 
+}
+.card-cobrado .round-header-old,
+.card-cobrado .round-header-new,
+.card-cobrado .round-status,
+.card-cobrado .round-status-new { 
+  color: #713f12 !important; 
+}
+
+/* ── Divider y cambios internos ── */
+.card-cobrado .divider { 
+  background: #fde047; 
+}
+
+.card-cobrado .changes-divider { 
+  border-top-color: #fde047; 
+}
+
+/* ── item-qty badge neutral dentro de card cobrado ── */
+.card-cobrado .item-qty { 
+  background: #fde047; 
+  color: #713f12; 
+}
+
+/* ── Entradas box para card cobrado ── */
+.card-cobrado .entradas-box { 
+  background: #fef08a; 
+  border-color: #fde047; 
+}
+.card-cobrado .entradas-box-label { 
+  color: #713f12; 
+}
+.card-cobrado .entradas-box-content { 
+  color: #854d0e; 
+}
+
+/* ── Cronómetro para estado cobrado ── */
+.timer-cobrado {
+  background: #fef08a;
+  color: #713f12;
+}
+
+/* ── Badge para estado cobrado ── */
+.badge-cobrado { 
+  background: #fef08a; 
+  color: #713f12; 
+  font-weight: 600;
+}
+
+/* ══ CRONÓMETRO ════════════════════════════════ */
+.timer-wrap {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  background: #d1fae5; color: #065f46;
+}
+.timer-wrap.timer-warn { background: #fef3c7; color: #92400e; }
+.timer-wrap.timer-danger {
+  background: #fee2e2; color: #991b1b;
+  animation: blink 1s step-start infinite;
+}
+.timer-wrap.timer-done { background: #f0f0f0; color: #555; }
+
+/* ══ CRONÓMETRO ════════════════════════════════ */
+.timer-wrap,
+.timer-green,
+.timer-orange,
+.timer-red,
+.timer-done,
+.timer-cobrado {
+  display: inline-flex; 
+  align-items: center; 
+  gap: 5px;
+  padding: 4px 10px; 
+  border-radius: 20px; 
+  font-size: 12px; 
+  font-weight: 600;
+}
+
+.timer-wrap,
+.timer-green {
+  background: #d1fae5; 
+  color: #065f46;
+}
+
+.timer-wrap.timer-warn,
+.timer-orange { 
+  background: #fef3c7; 
+  color: #92400e; 
+}
+
+.timer-wrap.timer-danger,
+.timer-red {
+  background: #fee2e2; 
+  color: #991b1b;
+  animation: blink 1s step-start infinite;
+}
+
+.timer-wrap.timer-done,
+.timer-done { 
+  background: #f0f0f0; 
+  color: #555; 
+}
+
+.timer-cobrado {
+  background: #fef08a;
+  color: #713f12;
+}
+
+@keyframes blink { 50% { opacity: 0.4; } }
+.timer-value { font-size: 13px; font-weight: 700; letter-spacing: 0.5px; }
+.timer-label { font-size: 10px; font-weight: 500; opacity: 0.8; }
+
+/* ══ BOTONES DINÁMICOS POR TIEMPO ══════════════ */
+.btn-time-green {
+  background: #059669 !important;
+  color: #fff !important;
+}
+
+.btn-time-green:hover:not(:disabled) {
+  background: #047857 !important;
+}
+
+.btn-time-orange {
+  background: #ea580c !important;
+  color: #fff !important;
+}
+
+.btn-time-orange:hover:not(:disabled) {
+  background: #c2410c !important;
+}
+
+.btn-time-red {
+  background: #dc2626 !important;
+  color: #fff !important;
+  animation: pulse-button 2s ease-in-out infinite;
+}
+
+.btn-time-red:hover:not(:disabled) {
+  background: #b91c1c !important;
+}
+
+@keyframes pulse-button {
+  0%, 100% { 
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+  }
+  50% { 
+    box-shadow: 0 0 0 8px rgba(220, 38, 38, 0);
+  }
+}
+
+/* Botón cobrado */
+.btn-cobrado { 
+  background: #fef08a; 
+  color: #713f12; 
+  border: 1px solid #fde047;
+}
+
+/* ══ CRONÓMETRO CON FONDOS RESALTANTES EN CARDS DE COLOR ══ */
+
+/* Cronómetro en card verde */
+.card-time-green .timer-green {
+  background: #34d399 !important;
+  color: #064e3b !important;
+  font-weight: 700;
+  padding: 6px 12px;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2);
+}
+
+/* Cronómetro en card naranja */
+.card-time-orange .timer-orange {
+  background: #fb923c !important;
+  color: #7c2d12 !important;
+  font-weight: 700;
+  padding: 6px 12px;
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.2);
+}
+
+/* Cronómetro en card roja */
+.card-time-red .timer-red {
+  background: #f87171 !important;
+  color: #7f1d1d !important;
+  font-weight: 700;
+  padding: 6px 12px;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3);
+  animation: blink 1s step-start infinite;
+}
+
+/* Cronómetro en card púrpura (para llevar) */
+.card-time-purple .timer-green,
+.card-time-purple .timer-orange,
+.card-time-purple .timer-red {
+  background: #a78bfa !important;
+  color: #4c1d95 !important;
+  font-weight: 700;
+  padding: 6px 12px;
+  box-shadow: 0 2px 6px rgba(109, 40, 217, 0.2);
+  animation: none;
+}
+
+/* Cronómetro en card cobrado */
+.card-cobrado .timer-cobrado {
+  background: #facc15 !important;
+  color: #713f12 !important;
+  font-weight: 700;
+  padding: 6px 12px;
+  box-shadow: 0 2px 6px rgba(234, 179, 8, 0.2);
+}
+
+.timer-value{
+  color: black;
+}
+
+.pill[data-status="Demorados"].active { 
+  background: #dc2626;
+  color: #fff;
+}
+
+/* Labels del timer más visibles */
+.card-time-green .timer-value,
+.card-time-orange .timer-value,
+.card-time-red .timer-value,
+.card-time-purple .timer-value,
+.card-cobrado .timer-value {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.card-time-green .timer-label,
+.card-time-orange .timer-label,
+.card-time-red .timer-label,
+.card-time-purple .timer-label,
+.card-cobrado .timer-label {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+/* ══ CARD HEADER ══════════════════════════════ */
+.card-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.card-id { font-size: 16px; font-weight: 600; color: #111; }
+.card-badges { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.badge { 
+  font-size: 11px; 
+  font-weight: 600; 
+  padding: 4px 12px; 
+  border-radius: 12px; 
+}
+.badge-new { 
+  background: #3b82f6; 
+  color: #fff; 
+}
+.badge-pending { 
+  background: #f59e0b; 
+  color: #fff; 
+}
+.badge-ready { 
+  background: #10b981; 
+  color: #fff; 
+}
+.badge-cancelled { 
+  background: #ef4444; 
+  color: #fff; 
+}
+.badge-cobrado { 
+  background: #eab308; 
+  color: #713f12; 
+  font-weight: 700;
+}
+.badge-llevar { 
+  background: #8b5cf6; 
+  color: #fff; 
+  font-weight: 600;
+}
+.badge-rounds {
+  font-size: 10px; 
+  font-weight: 600; 
+  padding: 3px 8px; 
+  border-radius: 10px;
+  background: #fef3c7; 
+  color: #92400e;
+}
+
+/* Item completamente servido */
+.item-served {
+  opacity: 0.6;
+}
+
+.item-name-served {
+  text-decoration: line-through;
+  color: #9ca3af;
+}
+
+/* Badge "✓ servido" */
+.item-served-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #10b981;
+  background: #d1fae5;
+  padding: 1px 6px;
+  border-radius: 10px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* Badge "X/Y servidos" (parcialmente servido) */
+.item-partial-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #f59e0b;
+  background: #fef3c7;
+  padding: 1px 6px;
+  border-radius: 10px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.entrada-item {
+  display: inline-block;
+  margin-right: 6px;
+  margin-bottom: 3px;
+}
+
+.entrada-servida {
+  text-decoration: line-through;
+  color: #9ca3af;
+  opacity: 0.6;
 }
