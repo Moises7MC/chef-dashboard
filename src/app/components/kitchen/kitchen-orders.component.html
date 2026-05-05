@@ -34,82 +34,105 @@
   </div>
 
   <!-- GRID -->
-  <div class="grid">
-    <div *ngFor="let order of filteredOrders" class="card" [class.card-multi-round]="order.hasMultipleRounds"
-      [ngClass]="getCardTimeClass(order.createdAt, order.status, order.updatedAt, order.tableNumber, order.isParaLlevar)">
+  <!-- GRID -->
+<div class="grid">
+  <div *ngFor="let group of filteredOrders" class="card" 
+       [class.card-multi-round]="group.orders.length > 1"
+       [ngClass]="getCardTimeClass(group.createdAt, group.status, group.updatedAt, group.tableNumber, hasParaLlevar(group))">
 
-      <!-- ENCABEZADO -->
-      <div class="card-header">
-        <!-- <span class="card-id">{{ order.tableNumber === 0 ? 'Para llevar' : 'Mesa ' + order.tableNumber }}</span> -->
-        <span class="card-id">
-          {{ order.tableNumber === 0 ? 'Para llevar' :
-          order.isParaLlevar ? 'Mesa ' + order.tableNumber + ' — Para llevar' :
-          'Mesa ' + order.tableNumber }}
+    <!-- ENCABEZADO -->
+    <div class="card-header">
+      <span class="card-id">
+        {{ group.tableNumber === 0 ? 'Para llevar' : 'Mesa ' + group.tableNumber }}
+      </span>
+      <div class="card-badges">
+        <span class="badge" 
+              [ngClass]="getBadgeClass(group.status, group.tableNumber, hasParaLlevar(group))"
+              [style.background]="getBadgeBackground(group.createdAt, group.status, group.updatedAt, group.tableNumber, hasParaLlevar(group))"
+              [style.color]="getBadgeColor(group.createdAt, group.status, group.updatedAt, group.tableNumber, hasParaLlevar(group))">
+          {{ (group.tableNumber === 0 || hasParaLlevar(group)) ? 'Para llevar' : getStatusLabel(group.status) }}
         </span>
-        <div class="card-badges">
-          <span class="badge" [ngClass]="getBadgeClass(order.status, order.tableNumber, order.isParaLlevar)"
-            [style.background]="getBadgeBackground(order.createdAt, order.status, order.updatedAt, order.tableNumber, order.isParaLlevar)"
-            [style.color]="getBadgeColor(order.createdAt, order.status, order.updatedAt, order.tableNumber, order.isParaLlevar)">
-            {{ (order.tableNumber === 0 || order.isParaLlevar) ? 'Para llevar' : getStatusLabel(order.status) }}
-          </span>
-          <span *ngIf="order.hasMultipleRounds" class="badge-rounds">+{{ order.rounds!.length }} rondas</span>
-        </div>
+        <span *ngIf="group.orders.length > 1" class="badge-multiple-orders">
+          {{ group.orders.length }} pedidos
+        </span>
       </div>
+    </div>
 
-      <!-- CRONÓMETRO -->
-      <div style="display:flex; align-items:center;">
-        <div class="" [ngClass]="getTimerClass(order.createdAt, order.status, order.updatedAt)">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-          <span class="timer-value">{{ formatElapsed(order.createdAt, order.status, order.updatedAt) }}</span>
-          <span class="timer-label">
-            <ng-container
-              *ngIf="order.status !== 'Listo' && order.status !== 'Cancelado' && order.status !== 'Cobrado'">
-              {{ getElapsedSeconds(order.createdAt, order.status, order.updatedAt) / 60 < 10 ? 'En tiempo' :
-                getElapsedSeconds(order.createdAt, order.status, order.updatedAt) / 60 < 20 ? 'Demorado'
-                : 'Muy demorado' }} </ng-container>
-                <ng-container *ngIf="order.status === 'Listo'">Completado</ng-container>
-                <ng-container *ngIf="order.status === 'Cancelado'">Cancelado</ng-container>
-                <ng-container *ngIf="order.status === 'Cobrado'">Cobrado</ng-container>
-          </span>
-        </div>
+    <!-- CRONÓMETRO -->
+    <div style="display:flex; align-items:center;">
+      <div class="" [ngClass]="getTimerClass(group.createdAt, group.status, group.updatedAt)">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+        <span class="timer-value">{{ formatElapsed(group.createdAt, group.status, group.updatedAt) }}</span>
+        <span class="timer-label">
+          <ng-container *ngIf="group.status !== 'Listo' && group.status !== 'Cancelado' && group.status !== 'Cobrado'">
+            {{ getElapsedSeconds(group.createdAt, group.status, group.updatedAt) / 60 < 10 ? 'En tiempo' :
+               getElapsedSeconds(group.createdAt, group.status, group.updatedAt) / 60 < 20 ? 'Demorado' : 'Muy demorado' }}
+          </ng-container>
+          <ng-container *ngIf="group.status === 'Listo'">Completado</ng-container>
+          <ng-container *ngIf="group.status === 'Cancelado'">Cancelado</ng-container>
+          <ng-container *ngIf="group.status === 'Cobrado'">Cobrado</ng-container>
+        </span>
       </div>
+    </div>
 
-      <!-- META -->
-      <div class="meta">
-        <div class="meta-row">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" />
-            <line x1="3" y1="10" x2="21" y2="10" />
+    <!-- META (datos generales compartidos) -->
+    <div class="meta">
+      <div class="meta-row">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+        {{ formatDate(group.createdAt) }} &mdash; {{ formatTime(group.createdAt) }}
+      </div>
+      <div class="meta-row">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+        {{ group.mealType }}
+      </div>
+      <div class="meta-row" *ngIf="group.waiterName">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+        {{ group.waiterName }}
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ✅ CONTENEDOR CON SCROLL PARA MÚLTIPLES ÓRDENES -->
+    <div class="orders-scroll-container" [class.has-multiple]="group.orders.length > 1">
+      
+      <div *ngFor="let order of group.orders" class="single-order-block">
+        
+        <!-- Identificador de orden (solo si hay múltiples) -->
+        <div *ngIf="group.orders.length > 1" class="order-type-label">
+          <svg *ngIf="order.isParaLlevar" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 2 L3 6 L3 20 C3 21.1 3.9 22 5 22 L19 22 C20.1 22 21 21.1 21 20 L21 6 L18 2 Z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <path d="M16 10 C16 12.21 14.21 14 12 14 C9.79 14 8 12.21 8 10"/>
           </svg>
-          {{ formatDate(order.createdAt) }} &mdash; {{ formatTime(order.createdAt) }}
+          <span>{{ order.isParaLlevar ? 'Para llevar' : 'Para comer aquí' }}</span>
         </div>
-        <div class="meta-row">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-          {{ order.mealType }}
-        </div>
-        <div class="meta-row" *ngIf="order.waiterName">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
-          {{ order.waiterName }}
-        </div>
+
         <!-- Entradas -->
-        <div class="entradas-box-label">Entradas</div>
-        <div class="entradas-box" *ngIf="order.entradas && order.entradas.trim().length > 0">
-  <ng-container *ngFor="let entrada of parseEntradasList(order.entradas)">
-    <span class="entrada-item"
-          [class.entrada-servida]="isEntradaServida(order, entrada)">
-      {{ entrada }}
-    </span>
-  </ng-container>
-</div>
+        <div *ngIf="order.entradas && order.entradas.trim().length > 0">
+          <div class="entradas-box-label">Entradas</div>
+          <div class="entradas-box">
+            <ng-container *ngFor="let entrada of parseEntradasList(order.entradas)">
+              <span class="entrada-item" [class.entrada-servida]="isEntradaServida(order, entrada)">
+                {{ entrada }}
+              </span>
+            </ng-container>
+          </div>
+        </div>
+
+        <!-- Total de esta orden -->
         <div class="total-row">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="1" x2="12" y2="23" />
@@ -117,111 +140,120 @@
           </svg>
           S/. {{ order.total.toFixed(2) }}
         </div>
-      </div>
 
-      <div class="divider"></div>
+        <!-- RONDAS de esta orden -->
+        <div class="rounds-section">
+          <ng-container *ngIf="order.rounds && order.rounds.length > 0; else flatItems">
+            <div class="section-label">Segundos</div>
+            
+            <div *ngFor="let round of order.rounds" class="round-block" 
+                 [class.round-old]="!round.isLatest"
+                 [class.round-new]="round.isLatest" 
+                 [class.round-has-changes]="round.changes && round.changes.length > 0">
 
-      <!-- RONDAS -->
-      <div class="rounds-section">
-        <ng-container *ngIf="order.rounds && order.rounds.length > 0; else flatItems">
-
-          <div class="section-label">Segundos</div>
-
-          <div *ngFor="let round of order.rounds" class="round-block" [class.round-old]="!round.isLatest"
-            [class.round-new]="round.isLatest" [class.round-has-changes]="round.changes && round.changes.length > 0">
-
-            <!-- Cabecera -->
-            <div class="round-header" [class.round-header-old]="!round.isLatest"
-              [class.round-header-new]="round.isLatest">
-              <div class="round-header-left">
-                <div class="round-dot" [class.dot-old]="!round.isLatest" [class.dot-new]="round.isLatest"></div>
-                <span>
-                  Ronda {{ round.roundNumber }}
-                  <span class="round-status" *ngIf="!round.isLatest"> — enviado</span>
-                  <span class="round-status-new" *ngIf="round.isLatest"> — recién llegó</span>
-                </span>
-              </div>
-              <span class="round-time">{{ formatTime(round.createdAt) }}</span>
-            </div>
-
-            <!-- Items normales -->
-            <div class="round-items">
-              <!-- DESPUÉS -->
-              <div *ngFor="let item of round.items" class="item-row"
-                [class.item-served]="(item.servedQuantity ?? 0) >= item.quantity">
-                <span class="item-qty" [class.item-qty-new]="round.isLatest">
-                  {{ item.quantity }}x
-                </span>
-                <span class="item-name" [class.item-name-served]="(item.servedQuantity ?? 0) >= item.quantity">
-                  {{ getProductName(item) }}
-                </span>
-                <span *ngIf="(item.servedQuantity ?? 0) > 0 && (item.servedQuantity ?? 0) < item.quantity"
-                  class="item-partial-badge">
-                  {{ item.servedQuantity }}/{{ item.quantity }} servidos
-                </span>
-                <span *ngIf="(item.servedQuantity ?? 0) >= item.quantity" class="item-served-badge">✓ servido</span>
-                <span *ngIf="round.isLatest && (item.servedQuantity ?? 0) < item.quantity"
-                  class="item-new-badge">nuevo</span>
+              <!-- Cabecera de ronda -->
+              <div class="round-header" 
+                   [class.round-header-old]="!round.isLatest"
+                   [class.round-header-new]="round.isLatest">
+                <div class="round-header-left">
+                  <div class="round-dot" 
+                       [class.dot-old]="!round.isLatest" 
+                       [class.dot-new]="round.isLatest"></div>
+                  <span>
+                    Ronda {{ round.roundNumber }}
+                    <span class="round-status" *ngIf="!round.isLatest"> — enviado</span>
+                    <span class="round-status-new" *ngIf="round.isLatest"> — recién llegó</span>
+                  </span>
+                </div>
+                <span class="round-time">{{ formatTime(round.createdAt) }}</span>
               </div>
 
-              <!-- ✅ Cambios (modificaciones/cancelaciones) fusionados dentro de la ronda -->
-              <ng-container *ngIf="round.changes && round.changes.length > 0">
-                <div class="changes-divider">
-                  <span class="changes-label">✏️ cambios</span>
+              <!-- Items de la ronda -->
+              <div class="round-items">
+                <div *ngFor="let item of round.items" class="item-row"
+                     [class.item-served]="(item.servedQuantity ?? 0) >= item.quantity">
+                  <span class="item-qty" [class.item-qty-new]="round.isLatest">
+                    {{ item.quantity }}x
+                  </span>
+                  <span class="item-name" [class.item-name-served]="(item.servedQuantity ?? 0) >= item.quantity">
+                    {{ getProductName(item) }}
+                  </span>
+                  <span *ngIf="(item.servedQuantity ?? 0) > 0 && (item.servedQuantity ?? 0) < item.quantity"
+                        class="item-partial-badge">
+                    {{ item.servedQuantity }}/{{ item.quantity }} servidos
+                  </span>
+                  <span *ngIf="(item.servedQuantity ?? 0) >= item.quantity" class="item-served-badge">✓ servido</span>
+                  <span *ngIf="round.isLatest && (item.servedQuantity ?? 0) < item.quantity"
+                        class="item-new-badge">nuevo</span>
                 </div>
-                <div *ngFor="let change of round.changes" class="item-row change-row"
-                  [class.change-row-modified]="change.action === 'Modificado'"
-                  [class.change-row-cancelled]="change.action === 'Cancelado'">
 
-                  <!-- Modificado -->
-                  <ng-container *ngIf="change.action === 'Modificado'">
-                    <span class="item-qty item-qty-modified">{{ change.newQuantity }}x</span>
-                    <span class="item-name">{{ change.productName }}</span>
-                    <div class="item-modified-info">
-                      <span class="old-qty" *ngIf="change.oldQuantity !== undefined">era {{ change.oldQuantity
-                        }}x</span>
-                      <span class="item-modified-badge">modificado</span>
-                    </div>
-                  </ng-container>
+                <!-- Cambios -->
+                <ng-container *ngIf="round.changes && round.changes.length > 0">
+                  <div class="changes-divider">
+                    <span class="changes-label">✏️ cambios</span>
+                  </div>
+                  <div *ngFor="let change of round.changes" class="item-row change-row"
+                       [class.change-row-modified]="change.action === 'Modificado'"
+                       [class.change-row-cancelled]="change.action === 'Cancelado'">
 
-                  <!-- Cancelado -->
-                  <ng-container *ngIf="change.action === 'Cancelado'">
-                    <span class="item-qty item-qty-cancelled">{{ change.newQuantity }}x</span>
-                    <span class="item-name item-name-cancelled">{{ change.productName }}</span>
-                    <span class="item-cancelled-badge">cancelado</span>
-                  </ng-container>
+                    <ng-container *ngIf="change.action === 'Modificado'">
+                      <span class="item-qty item-qty-modified">{{ change.newQuantity }}x</span>
+                      <span class="item-name">{{ change.productName }}</span>
+                      <div class="item-modified-info">
+                        <span class="old-qty" *ngIf="change.oldQuantity !== undefined">era {{ change.oldQuantity }}x</span>
+                        <span class="item-modified-badge">modificado</span>
+                      </div>
+                    </ng-container>
 
-                </div>
-              </ng-container>
+                    <ng-container *ngIf="change.action === 'Cancelado'">
+                      <span class="item-qty item-qty-cancelled">{{ change.newQuantity }}x</span>
+                      <span class="item-name item-name-cancelled">{{ change.productName }}</span>
+                      <span class="item-cancelled-badge">cancelado</span>
+                    </ng-container>
 
+                  </div>
+                </ng-container>
+
+              </div>
             </div>
-          </div>
 
-        </ng-container>
+          </ng-container>
 
-        <ng-template #flatItems>
-          <div class="section-label">Productos</div>
-          <div *ngFor="let item of order.items" class="item-row-flat">
-            <span class="item-qty">{{ item.quantity }}x</span>
-            <span>{{ item.product?.name || 'Producto' }}</span>
-          </div>
-        </ng-template>
+          <ng-template #flatItems>
+            <div class="section-label">Productos</div>
+            <div *ngFor="let item of order.items" class="item-row-flat">
+              <span class="item-qty">{{ item.quantity }}x</span>
+              <span>{{ item.product?.name || 'Producto' }}</span>
+            </div>
+          </ng-template>
+        </div>
+
+        <!-- Divider entre órdenes (solo si hay múltiples) -->
+        <div *ngIf="group.orders.length > 1 && order !== group.orders[group.orders.length - 1]" 
+             class="order-divider"></div>
+
       </div>
 
-      <!-- ACCIONES -->
-      <div class="card-actions">
-        <button *ngIf="order.status === 'Enviado a cocina' || order.status === 'Pendiente'" class="btn btn-green"
-          [ngClass]="getButtonClass(order.createdAt, order.status, order.updatedAt)" (click)="markAsReady(order.id)">✓
-          Marcar como listo</button>
-        <ng-container *ngIf="order.status === 'Listo'">
-          <button class="btn btn-green btn-done" disabled>Listo para entregar</button>
-          <button class="btn btn-blue" (click)="downloadComprobante(order.id)">Descargar Comprobante</button>
-        </ng-container>
-        <button *ngIf="order.status === 'Cancelado'" class="btn btn-outline" disabled>Cancelado</button>
-        <button *ngIf="order.status === 'Cobrado'" class="btn btn-cobrado" disabled>✓ Pedido cobrado</button>
-      </div>
     </div>
 
-    <div *ngIf="filteredOrders.length === 0" class="empty">Sin pedidos para mostrar</div>
+    <!-- ACCIONES (basadas en la primera orden del grupo) -->
+    <div class="card-actions">
+      <button *ngIf="group.status === 'Enviado a cocina' || group.status === 'Pendiente'" 
+              class="btn btn-green"
+              [ngClass]="getButtonClass(group.createdAt, group.status, group.updatedAt)" 
+              (click)="markAsReady(group.orders[0].id)">
+        ✓ Marcar como listo
+      </button>
+      <ng-container *ngIf="group.status === 'Listo'">
+        <button class="btn btn-green btn-done" disabled>Listo para entregar</button>
+        <button class="btn btn-blue" (click)="downloadComprobante(group.orders[0].id)">Descargar Comprobante</button>
+      </ng-container>
+      <button *ngIf="group.status === 'Cancelado'" class="btn btn-outline" disabled>Cancelado</button>
+      <button *ngIf="group.status === 'Cobrado'" class="btn btn-cobrado" disabled>✓ Pedido cobrado</button>
+    </div>
+
   </div>
+
+  <div *ngIf="filteredOrders.length === 0" class="empty">Sin pedidos para mostrar</div>
+</div>
 </div>

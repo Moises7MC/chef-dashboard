@@ -4,6 +4,16 @@ import { FormsModule } from '@angular/forms';
 import { OrderService, Order } from '../../services/order.service';
 import { AuthService } from '../../services/auth.service';
 
+interface OrderGroup {
+  tableNumber: number;
+  orders: Order[];
+  createdAt: string;
+  status: string;
+  updatedAt?: string;
+  mealType?: string;
+  waiterName?: string;
+}
+
 @Component({
   selector: 'app-kitchen-orders',
   standalone: true,
@@ -14,7 +24,7 @@ import { AuthService } from '../../services/auth.service';
 export class KitchenOrdersComponent implements OnInit, OnDestroy {
 
   allOrders: Order[] = [];
-  filteredOrders: Order[] = [];
+  filteredOrders: OrderGroup[] = [];
   selectedDate: string = (() => {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
@@ -38,10 +48,38 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
   now: number = Date.now();
 
   constructor(
-  private orderService: OrderService, 
-  private auth: AuthService,
-  private cdr: ChangeDetectorRef  // ← AGREGAR
-) { }
+    private orderService: OrderService,
+    private auth: AuthService,
+    private cdr: ChangeDetectorRef  // ← AGREGAR
+  ) { }
+
+  // ══════════════════════════════════════════════════════════════
+  // AGRUPAR ÓRDENES POR MESA (combina normal + para llevar)
+  // ══════════════════════════════════════════════════════════════
+  groupOrdersByTable(orders: Order[]): OrderGroup[] {
+    const grouped = new Map<number, any>();
+
+    for (const order of orders) {
+      const tableNum = order.tableNumber;
+
+      if (!grouped.has(tableNum)) {
+        grouped.set(tableNum, {
+          tableNumber: tableNum,
+          orders: [],
+          // Datos para la UI (tomados de la primera orden)
+          createdAt: order.createdAt,
+          status: order.status,
+          updatedAt: order.updatedAt,
+          mealType: order.mealType,
+          waiterName: order.waiterName,
+        });
+      }
+
+      grouped.get(tableNum)!.orders.push(order);
+    }
+
+    return Array.from(grouped.values());
+  }
 
   ngOnInit(): void {
     this.orderService.loadOrders().then(() => this.applyFiltersLocal());
@@ -77,7 +115,6 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
 
     if (this.activeFilter !== 'all') {
       if (this.activeFilter === 'Demorados') {
-        // Filtrar pedidos que tienen más de 15 minutos y no están en estado final
         orders = orders.filter(o => {
           const isActive = o.status === 'Enviado a cocina' || o.status === 'Pendiente';
           if (!isActive) return false;
@@ -96,7 +133,9 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     }
 
     this.allOrders = this.orderService.getOrdersByDate(date);
-    this.filteredOrders = orders;
+
+    // ✅ NUEVO: Agrupar por mesa
+    this.filteredOrders = this.groupOrdersByTable(orders);
   }
 
   setFilter(key: string): void {
@@ -255,33 +294,40 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
   }
 
   parseEntradasList(entradas: string): string[] {
-  if (!entradas) return [];
-  return entradas
-    .replace(/(\d+)x\s*/gi, (_, n) => `${n}x `)
-    .split(',')
-    .map(e => e.trim())
-    .filter(e => e.length > 0);
-}
-
-isEntradaServida(order: Order, entrada: string): boolean {
-  if (!order.entradasServidas) return false;
-  
-  // Si llega como string JSON del backend, parsearlo
-  let servidas: string[] = [];
-  if (typeof order.entradasServidas === 'string') {
-    try {
-      servidas = JSON.parse(order.entradasServidas as string);
-    } catch {
-      return false;
-    }
-  } else {
-    servidas = order.entradasServidas;
+    if (!entradas) return [];
+    return entradas
+      .replace(/(\d+)x\s*/gi, (_, n) => `${n}x `)
+      .split(',')
+      .map(e => e.trim())
+      .filter(e => e.length > 0);
   }
 
-  if (!Array.isArray(servidas)) return false;
+  isEntradaServida(order: Order, entrada: string): boolean {
+    if (!order.entradasServidas) return false;
 
-  const entradaNorm = entrada.toLowerCase().trim()
-    .replace(/^\d+x\s*/i, '');
-  return servidas.some(s => s.toLowerCase().trim() === entradaNorm);
-}
+    // Si llega como string JSON del backend, parsearlo
+    let servidas: string[] = [];
+    if (typeof order.entradasServidas === 'string') {
+      try {
+        servidas = JSON.parse(order.entradasServidas as string);
+      } catch {
+        return false;
+      }
+    } else {
+      servidas = order.entradasServidas;
+    }
+
+    if (!Array.isArray(servidas)) return false;
+
+    const entradaNorm = entrada.toLowerCase().trim()
+      .replace(/^\d+x\s*/i, '');
+    return servidas.some(s => s.toLowerCase().trim() === entradaNorm);
+  }
+
+  // Verifica si el grupo tiene al menos una orden "para llevar"
+  hasParaLlevar(group: any): boolean {
+    return group.orders.some((o: Order) => o.isParaLlevar === true);
+  }
+
+  
 }

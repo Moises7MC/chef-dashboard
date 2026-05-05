@@ -798,3 +798,104 @@
   color: #9ca3af;
   opacity: 0.6;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   SCROLL CONTAINER PARA MÚLTIPLES ÓRDENES EN LA MISMA MESA
+   ══════════════════════════════════════════════════════════════ */
+
+.orders-scroll-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Cuando hay múltiples órdenes, activar scroll */
+.orders-scroll-container.has-multiple {
+  max-height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  margin-right: -4px;
+}
+
+/* Scrollbar personalizada */
+.orders-scroll-container.has-multiple::-webkit-scrollbar {
+  width: 6px;
+}
+
+.orders-scroll-container.has-multiple::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 10px;
+}
+
+.orders-scroll-container.has-multiple::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  border-radius: 10px;
+}
+
+.orders-scroll-container.has-multiple::-webkit-scrollbar-thumb:hover {
+  background: #a0a0a0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BLOQUES DE ÓRDENES INDIVIDUALES DENTRO DEL SCROLL
+   ══════════════════════════════════════════════════════════════ */
+
+.single-order-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+/* Label que identifica el tipo de orden */
+.order-type-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #7c3aed;
+  padding: 4px 8px;
+  background: #f5f3ff;
+  border-left: 3px solid #7c3aed;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.order-type-label svg {
+  flex-shrink: 0;
+  stroke: #7c3aed;
+}
+
+/* Divider entre órdenes dentro del scroll */
+.order-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, #c4b5fd 20%, #c4b5fd 80%, transparent);
+  margin: 8px 0;
+}
+
+/* Badge para indicar múltiples pedidos */
+.badge-multiple-orders {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: #ddd6fe;
+  color: #6d28d9;
+}
+
+/* Ajustes para que los rounds no rompan el layout */
+.single-order-block .rounds-section {
+  flex-shrink: 0;
+}
+
+/* Ajustes visuales en cards con múltiples órdenes */
+.card-multi-round .orders-scroll-container.has-multiple {
+  border: 1px solid #ddd6fe;
+  border-radius: 8px;
+  padding: 8px;
+  background: rgba(245, 243, 255, 0.3);
+}
