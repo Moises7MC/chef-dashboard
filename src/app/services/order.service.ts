@@ -6,27 +6,25 @@ import { environment } from '../../environments/environment';
 
 const API_URL = environment.apiBaseUrl;
 
-
 export interface OrderHistoryEntry {
   id: number;
   orderId: number;
   createdAt: string;
   action: string;
   itemsAdded: string;
-  roundNumber?: number; // ✅ NUEVO
+  roundNumber?: number;
 }
 
 export interface OrderHistoryItem {
   productId: number;
   productName?: string;
   quantity: number;
-  servedQuantity?: number; // ← AGREGAR
+  servedQuantity?: number;
   oldQuantity?: number;
   unitPrice: number;
   product?: { id: number; name: string };
 }
 
-// ✅ Modificación/cancelación fusionada dentro de una ronda
 export interface RoundChange {
   action: 'Modificado' | 'Cancelado';
   productId: number;
@@ -44,7 +42,7 @@ export interface OrderRound {
   isLatest: boolean;
   isCancelled: boolean;
   isModified: boolean;
-  changes?: RoundChange[]; // ✅ modificaciones/cancelaciones fusionadas
+  changes?: RoundChange[];
 }
 
 export interface Order {
@@ -62,7 +60,7 @@ export interface Order {
   updatedAt?: string;
   entradas?: string;
   isParaLlevar?: boolean;
-  entradasServidas?: string[]; // ← AGREGAR
+  entradasServidas?: string[];
 }
 
 export interface OrderItem {
@@ -70,7 +68,7 @@ export interface OrderItem {
   orderId: number;
   productId: number;
   quantity: number;
-  servedQuantity: number; // ← AGREGAR
+  servedQuantity: number;
   unitPrice: number;
   total: number;
   product?: { id: number; name: string };
@@ -110,32 +108,26 @@ export class OrderService {
       .build();
 
     this.hubConnection.on('NuevoPedido', () => {
-      console.log('🔔 NuevoPedido recibido');
       this.loadOrders();
     });
 
     this.hubConnection.on('PedidoListo', () => {
-      console.log('🔔 PedidoListo recibido');
       this.loadOrders();
     });
 
     this.hubConnection.on('ActualizacionPedido', () => {
-      console.log('🔔 ActualizacionPedido recibido en web!');
       this.loadOrders();
     });
 
     this.hubConnection.on('OrderStatusChanged', () => {
-      console.log('🔔 OrderStatusChanged recibido');
       this.loadOrders();
     });
 
     this.hubConnection.on('ItemServed', () => {
-      console.log('🔔 ItemServed recibido');
       this.loadOrders();
     });
 
     this.hubConnection.on('EntradaServida', () => {
-      console.log('🔔 EntradaServida recibido');
       this.loadOrders();
     });
   }
@@ -144,9 +136,7 @@ export class OrderService {
     return new Promise((resolve, reject) => {
       this.http.get<Order[]>(`${API_URL}/api/order`).subscribe({
         next: async (orders) => {
-          console.log('📦 loadOrders - órdenes recibidas:', orders.length);
           const enriched = await Promise.all(orders.map(o => this.enrichOrderWithRounds(o)));
-          console.log('📦 loadOrders - enriched:', enriched.length);
           this.orders$.next(enriched);
           resolve();
         },
@@ -170,41 +160,50 @@ export class OrderService {
   private buildRounds(history: OrderHistoryEntry[], order: Order): OrderRound[] {
     if (!history || history.length === 0) {
       return [{
-        roundNumber: 1, action: 'Inicial', createdAt: order.createdAt,
+        roundNumber: 1,
+        action: 'Inicial',
+        createdAt: order.createdAt,
         items: order.items.map(i => ({
           productId: i.productId,
+          productName: this.resolveProductName(i.productId, order.items, i.product),
           quantity: i.quantity,
-          servedQuantity: i.servedQuantity ?? 0, // ← AGREGAR
+          servedQuantity: i.servedQuantity ?? 0,
           unitPrice: i.unitPrice,
           product: { id: i.productId, name: this.resolveProductName(i.productId, order.items, i.product) }
         })),
-        isLatest: false, isCancelled: false, isModified: false, changes: []
+        isLatest: false,
+        isCancelled: false,
+        isModified: false,
+        changes: []
       }];
     }
 
-    // ✅ Separar entradas normales de modificaciones/cancelaciones
     const normalEntries = history.filter(h => h.action === 'Inicial' || h.action === 'Agregado');
     const changeEntries = history.filter(h => h.action === 'Modificado' || h.action === 'Cancelado');
 
-    // ✅ Construir mapa: roundNumber -> RoundChange[]
     const changesByRound = new Map<number, RoundChange[]>();
 
     for (const entry of changeEntries) {
       let rawItems: any[] = [];
       try {
         const parsed = JSON.parse(entry.itemsAdded);
-        if (Array.isArray(parsed)) rawItems = parsed;
-      } catch { rawItems = []; }
+        if (Array.isArray(parsed)) {
+          rawItems = parsed;
+        } else if (parsed && typeof parsed === 'object') {
+          rawItems = [parsed];
+        }
+      } catch {
+        console.warn('No se pudo parsear itemsAdded para change:', entry);
+        rawItems = [];
+      }
 
-      // roundNumber del backend (nuevo) o fallback: buscar en cuál ronda normal estaba el producto
       for (const raw of rawItems) {
         const productId: number = raw.productId ?? raw.ProductId ?? 0;
-        const quantity: number = raw.quantity ?? raw.Quantity ?? 1;
+        const quantity: number = raw.quantity ?? raw.Quantity ?? 0;
         const oldQty: number | undefined = raw.oldQuantity ?? raw.OldQuantity ?? undefined;
         const name: string = raw.productName ?? raw.ProductName ??
           this.resolveProductName(productId, order.items);
 
-        // Usar roundNumber del backend si existe, sino buscar manualmente
         let targetRound = entry.roundNumber ?? this.findRoundForProduct(productId, normalEntries);
 
         const change: RoundChange = {
@@ -221,36 +220,43 @@ export class OrderService {
       }
     }
 
-    // ✅ Construir rondas normales con sus changes fusionados
     const rounds: OrderRound[] = normalEntries.map((entry, idx) => {
       let rawItems: any[] = [];
       try {
         const parsed = JSON.parse(entry.itemsAdded);
-        if (Array.isArray(parsed)) rawItems = parsed;
-      } catch { rawItems = []; }
+        if (Array.isArray(parsed)) {
+          rawItems = parsed;
+        } else if (parsed && typeof parsed === 'object') {
+          rawItems = [parsed];
+        }
+      } catch {
+        console.warn('No se pudo parsear itemsAdded:', entry.itemsAdded);
+        rawItems = [];
+      }
 
       const roundNumber = idx + 1;
       const isLatest = normalEntries.length > 1 && idx === normalEntries.length - 1;
 
       const items: OrderHistoryItem[] = rawItems.map((raw: any) => {
         const productId: number = raw.productId ?? raw.ProductId ?? 0;
-        const quantity: number = raw.quantity ?? raw.Quantity ?? 1;
+        const quantity: number = raw.quantity ?? raw.Quantity ?? 0;
         const unitPrice: number = raw.unitPrice ?? raw.UnitPrice ?? 0;
         const inlineName: string = raw.productName ?? raw.ProductName ?? '';
         const inlineProduct = raw.product ?? raw.Product ?? null;
         const name = this.resolveProductName(productId, order.items, inlineProduct, inlineName);
 
-        // ✅ AGREGAR: cruzar con order.items para obtener servedQuantity real
         const realItem = order.items.find(i => i.productId === productId);
 
         return {
           productId,
+          productName: name,
           quantity,
+          servedQuantity: realItem?.servedQuantity ?? 0,
           unitPrice,
-          servedQuantity: realItem?.servedQuantity ?? 0, // ✅ ESTO ES LO QUE FALTABA
           product: { id: productId, name }
         };
       });
+
       return {
         roundNumber,
         action: entry.action,
@@ -266,18 +272,17 @@ export class OrderService {
     return rounds;
   }
 
-  // Fallback: buscar en qué ronda normal apareció primero un producto
   private findRoundForProduct(productId: number, normalEntries: OrderHistoryEntry[]): number {
     for (let i = 0; i < normalEntries.length; i++) {
       try {
-        const items = JSON.parse(normalEntries[i].itemsAdded);
-        if (Array.isArray(items) && items.some((it: any) =>
-          (it.productId ?? it.ProductId) === productId)) {
+        const parsed = JSON.parse(normalEntries[i].itemsAdded);
+        const items = Array.isArray(parsed) ? parsed : [parsed];
+        if (items.some((it: any) => (it.productId ?? it.ProductId) === productId)) {
           return i + 1;
         }
       } catch { }
     }
-    return 1; // fallback a ronda 1
+    return 1;
   }
 
   getOrdersByDate(date: Date): Order[] {
@@ -297,7 +302,7 @@ export class OrderService {
   getTodayOrders(): Order[] {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
-    const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const today = `${now}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
     return this.orders$.value.filter(o => {
       const d = new Date(o.createdAt);
       const orderStr = d.toLocaleDateString('es-PE', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -314,15 +319,12 @@ export class OrderService {
   }
 
   disconnect(): Promise<void> { return this.hubConnection!.stop(); }
+  
   joinKitchenGroup(): Promise<void> {
     console.log('🏠 Uniéndose al grupo Cocina, estado:', this.hubConnection?.state);
     return this.hubConnection!.invoke('JoinKitchenGroup');
   }
 
-  // ✅ ELIMINADA la llamada SignalR errónea.
-  //    El backend al recibir el PUT de updateOrderStatus ya emite los eventos
-  //    automáticamente a todos los clientes conectados (cocina, mozos, cantadores).
-  //    No hace falta invocar nada más desde el cliente.
   markOrderAsReady(orderId: number): Promise<void> {
     return Promise.resolve();
   }

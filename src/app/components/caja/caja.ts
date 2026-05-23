@@ -25,6 +25,7 @@ interface Transaction {
   tableNumber: number | null;
   paymentMethod: string | null;
   createdAt: string;
+  orderId: number | null;
 }
 
 interface Summary {
@@ -33,6 +34,23 @@ interface Summary {
   balance: number;
   totalTransacciones: number;
   porMetodoPago: { metodo: string; total: number; count: number }[];
+  isClosed?: boolean; // ✅ NUEVO: propiedad opcional para el estado del candado
+}
+
+interface HistorialItem {
+  productId: number;
+  productName?: string;
+  quantity: number;
+  oldQuantity?: number;
+  unitPrice: number;
+}
+
+interface OrderHistory {
+  id: number;
+  action: string;
+  roundNumber: number;
+  createdAt: string;
+  items: HistorialItem[];
 }
 
 @Component({
@@ -50,7 +68,7 @@ export class CajaComponent implements OnInit, OnDestroy {
   // Datos
   ordenesListas: OrdenLista[] = [];
   transactions: Transaction[] = [];
-  summary: Summary = { ingresos: 0, gastos: 0, balance: 0, totalTransacciones: 0, porMetodoPago: [] };
+  summary: Summary = { ingresos: 0, gastos: 0, balance: 0, totalTransacciones: 0, porMetodoPago: [], isClosed: false };
 
   // UI
   activeTab: 'cobrar' | 'transacciones' | 'resumen' = 'cobrar';
@@ -71,10 +89,23 @@ export class CajaComponent implements OnInit, OnDestroy {
   showCierreModal = false;
   cierreResult: any = null;
 
+  // Modal historial
+  showHistoryModal = false;
+  historyLoading = false;
+  selectedTransaction: Transaction | null = null;
+  orderHistory: OrderHistory[] = [];
+
   loading = false;
   procesando = false;
 
-  constructor(private http: HttpClient) {}
+  // ✅ CORREGIDO: Toma la fecha local de tu computadora en lugar de la fecha universal UTC
+  selectedDate: string = (() => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  })();
+
+  constructor(private http: HttpClient) { }
 
   ngOnInit() {
     this.loadAll();
@@ -91,6 +122,15 @@ export class CajaComponent implements OnInit, OnDestroy {
     this.loadSummary();
   }
 
+  // ✅ NUEVO MÉTODO: Se llama cuando cambias la fecha en el input de arriba
+  onDateChange() {
+    this.loadTransactions();
+    this.loadSummary();
+    // Nota: El backend por ahora devuelve el resumen y órdenes listas solo de "hoy". 
+    // Si más adelante lo actualizas para buscar resumenes históricos, agregarías la llamada aquí.
+  }
+  
+
   loadOrdenesListas() {
     this.http.get<OrdenLista[]>(`${this.apiUrl}/transaction/ordenes-listas`).subscribe({
       next: (data) => this.ordenesListas = data,
@@ -99,19 +139,21 @@ export class CajaComponent implements OnInit, OnDestroy {
   }
 
   loadTransactions() {
-    this.http.get<Transaction[]>(`${this.apiUrl}/transaction/today`).subscribe({
-      next: (data) => this.transactions = data,
-      error: (e) => console.error(e)
+    const formattedDate = this.selectedDate; // yyyy-MM-dd
+    this.http.get<Transaction[]>(
+      `${this.apiUrl}/transaction/by-date?date=${formattedDate}`
+    ).subscribe(res => {
+      this.transactions = res;
     });
   }
 
   loadSummary() {
-    this.http.get<Summary>(`${this.apiUrl}/transaction/summary/today`).subscribe({
+    const formattedDate = this.selectedDate; // yyyy-MM-dd
+    this.http.get<Summary>(`${this.apiUrl}/transaction/summary/by-date?date=${formattedDate}`).subscribe({
       next: (data) => this.summary = data,
       error: (e) => console.error(e)
     });
   }
-
   connectSignalR() {
     this.hubConnection = new signalR.HubConnectionBuilder()
       .withUrl(`${this.apiBaseUrl}/hubs/orders`)
@@ -212,5 +254,40 @@ export class CajaComponent implements OnInit, OnDestroy {
       'Efectivo': '#059669', 'Tarjeta': '#2563eb', 'Yape': '#7c3aed', 'Plin': '#0891b2'
     };
     return colors[method] || '#6b7280';
+  }
+
+  openHistoryModal(transaction: Transaction) {
+    if (!transaction.orderId) {
+      return;
+    }
+    this.selectedTransaction = transaction;
+    this.showHistoryModal = true;
+    this.historyLoading = true;
+    this.orderHistory = [];
+
+    this.http.get<OrderHistory[]>(
+      `${this.apiUrl}/order/${transaction.orderId}/history`
+    ).subscribe({
+      next: (data) => {
+        this.orderHistory = data;
+        this.historyLoading = false;
+      },
+      error: (e) => {
+        console.error(e);
+        this.historyLoading = false;
+      }
+    });
+  }
+
+  // ✅ NUEVO: Abre una pestaña en segundo plano para descargar el reporte en Excel
+  descargarExcel() {
+    const url = `${this.apiUrl}/transaction/export/excel?date=${this.selectedDate}`;
+    window.open(url, '_blank');
+  }
+
+  // ✅ NUEVO: Abre una pestaña en segundo plano para descargar el reporte en PDF
+  descargarPDF() {
+    const url = `${this.apiUrl}/transaction/export/pdf?date=${this.selectedDate}`;
+    window.open(url, '_blank');
   }
 }

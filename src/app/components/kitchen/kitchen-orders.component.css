@@ -899,3 +899,11 @@
   padding: 8px;
   background: rgba(245, 243, 255, 0.3);
 }
+
+.btn-time-purple {
+  background: #7c3aed !important;
+  color: #fff !important;
+}
+.btn-time-purple:hover:not(:disabled) {
+  background: #6d28d9 !important;
+}

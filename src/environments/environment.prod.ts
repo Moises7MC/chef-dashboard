@@ -1,6 +1,6 @@
-// ✅ Configuración de PRODUCCIÓN (cuando Vercel hace build con `ng build`)
+// ✅ Configuración de PRODUCCIÓN para la RED LOCAL
 export const environment = {
   production: true,
-  apiUrl: 'https://app-restaurant-api.onrender.com/api',
-  apiBaseUrl: 'https://app-restaurant-api.onrender.com' // sin /api, para SignalR
+  apiUrl: 'http://192.168.18.82:5245/api',
+  apiBaseUrl: 'http://192.168.18.82:5245' 
 };

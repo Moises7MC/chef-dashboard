@@ -43,30 +43,31 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     { key: 'Cobrado', label: 'Cobrado' },
     { key: 'Cancelado', label: 'Cancelado' },
   ];
-  // Cronómetro
+
   private _timerInterval: any;
   now: number = Date.now();
 
   constructor(
     private orderService: OrderService,
     private auth: AuthService,
-    private cdr: ChangeDetectorRef  // ← AGREGAR
+    private cdr: ChangeDetectorRef
   ) { }
 
-  // ══════════════════════════════════════════════════════════════
-  // AGRUPAR ÓRDENES POR MESA (combina normal + para llevar)
-  // ══════════════════════════════════════════════════════════════
+  // ✅ Agrupar órdenes considerando tableNumber > 100 como "para llevar" (Caja)
   groupOrdersByTable(orders: Order[]): OrderGroup[] {
-    const grouped = new Map<number, any>();
+    const grouped = new Map<string, any>();
 
     for (const order of orders) {
-      const tableNum = order.tableNumber;
+      // ✅ Pedidos de Caja (tableNumber > 100) o para llevar (tableNumber === 0)
+      // cada uno es su propio grupo
+      const key = (order.tableNumber === 0 || order.tableNumber > 100)
+        ? `order-${order.id}`
+        : `table-${order.tableNumber}`;
 
-      if (!grouped.has(tableNum)) {
-        grouped.set(tableNum, {
-          tableNumber: tableNum,
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          tableNumber: order.tableNumber,
           orders: [],
-          // Datos para la UI (tomados de la primera orden)
           createdAt: order.createdAt,
           status: order.status,
           updatedAt: order.updatedAt,
@@ -75,7 +76,7 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
         });
       }
 
-      grouped.get(tableNum)!.orders.push(order);
+      grouped.get(key)!.orders.push(order);
     }
 
     return Array.from(grouped.values());
@@ -91,7 +92,6 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
       this.cdr.detectChanges();
     });
 
-    // Tick cada segundo
     this._timerInterval = setInterval(() => {
       this.now = Date.now();
     }, 1000);
@@ -133,8 +133,6 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     }
 
     this.allOrders = this.orderService.getOrdersByDate(date);
-
-    // ✅ NUEVO: Agrupar por mesa
     this.filteredOrders = this.groupOrdersByTable(orders);
   }
 
@@ -170,7 +168,7 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
   }
 
   getBadgeClass(status: string, tableNumber?: number, isParaLlevar?: boolean): string {
-    if (tableNumber === 0 || isParaLlevar) return 'badge-llevar';
+    if (tableNumber === 0 || tableNumber! > 100 || isParaLlevar) return 'badge-llevar';
     const map: Record<string, string> = {
       'Enviado a cocina': 'badge-new',
       'Pendiente': 'badge-pending',
@@ -197,8 +195,6 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     return item?.product?.name || 'Producto';
   }
 
-  // ── Cronómetro ──────────────────────────────────────────────
-
   getElapsedSeconds(createdAt: string, status?: string, updatedAt?: string): number {
     const end = (status === 'Listo' || status === 'Cancelado' || status === "Cobrado") && updatedAt
       ? new Date(updatedAt).getTime()
@@ -216,13 +212,16 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     return `${pad(m)}:${pad(s)}`;
   }
 
-  // Verde 0-10 min, naranja 10-20, rojo 20+, gris si listo/cancelado
-  getTimerClass(createdAt: string, status: string, updatedAt?: string): string {
+  getTimerClass(createdAt: string, status: string, updatedAt?: string, isParaLlevar?: boolean): string {
     if (status === 'Cobrado') return 'timer-cobrado';
     if (status === 'Listo' || status === 'Cancelado') return 'timer-done';
     const mins = this.getElapsedSeconds(createdAt, status, updatedAt) / 60;
-    if (mins < 10) return 'timer-green';
-    if (mins < 20) return 'timer-orange';
+    if (isParaLlevar) {
+      if (mins < 15) return 'timer-green';
+      return 'timer-red';
+    }
+    if (mins < 8) return 'timer-green';
+    if (mins < 15) return 'timer-orange';
     return 'timer-red';
   }
 
@@ -239,52 +238,54 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
   }
 
   getCardTimeClass(createdAt: string, status: string, updatedAt?: string, tableNumber?: number, isParaLlevar?: boolean): string {
-
     if (status === 'Cobrado') return 'card-cobrado';
-
     if (status === 'Listo' || status === 'Cancelado') return '';
-    if (tableNumber === 0 || isParaLlevar) return 'card-time-purple';
+
     const mins = this.getElapsedSeconds(createdAt, status, updatedAt) / 60;
+
+    if (tableNumber === 0 || tableNumber! > 100 || isParaLlevar) {
+      if (mins < 15) return 'card-time-purple';
+      return 'card-time-red';
+    }
+
     if (mins < 8) return 'card-time-green';
     if (mins < 15) return 'card-time-orange';
     return 'card-time-red';
   }
 
   isParaLlevar(order: Order): boolean {
-    return order.tableNumber === 0;
+    return order.tableNumber === 0 || order.tableNumber > 100;
   }
 
-  getButtonClass(createdAt: string, status: string, updatedAt?: string): string {
+  getButtonClass(createdAt: string, status: string, updatedAt?: string, isParaLlevar?: boolean): string {
     const mins = this.getElapsedSeconds(createdAt, status, updatedAt) / 60;
+    if (isParaLlevar) {
+      if (mins < 15) return 'btn-time-purple';
+      return 'btn-time-red';
+    }
     if (mins < 8) return 'btn-time-green';
     if (mins < 15) return 'btn-time-orange';
     return 'btn-time-red';
   }
 
   getBadgeBackground(createdAt: string, status: string, updatedAt?: string, tableNumber?: number, isParaLlevar?: boolean): string {
-    // Para llevar siempre púrpura
-    if (tableNumber === 0 || isParaLlevar) return '#8b5cf6';
-
-    // Estados finales
+    if (tableNumber === 0 || tableNumber! > 100 || isParaLlevar) {
+      const mins = this.getElapsedSeconds(createdAt, status, updatedAt) / 60;
+      if (mins < 15) return '#8b5cf6';
+      return '#ef4444';
+    }
     if (status === 'Cobrado') return '#eab308';
     if (status === 'Listo') return '#10b981';
     if (status === 'Cancelado') return '#ef4444';
-
-    // Estados activos según tiempo
     const mins = this.getElapsedSeconds(createdAt, status, updatedAt) / 60;
-    if (mins < 8) return '#10b981';  // Verde
-    if (mins < 15) return '#f59e0b'; // Naranja
-    return '#ef4444'; // Rojo
+    if (mins < 8) return '#10b981';
+    if (mins < 15) return '#f59e0b';
+    return '#ef4444';
   }
 
   getBadgeColor(createdAt: string, status: string, updatedAt?: string, tableNumber?: number, isParaLlevar?: boolean): string {
-    // Para llevar
-    if (tableNumber === 0 || isParaLlevar) return '#fff';
-
-    // Cobrado tiene texto oscuro
+    if (tableNumber === 0 || tableNumber! > 100 || isParaLlevar) return '#fff';
     if (status === 'Cobrado') return '#713f12';
-
-    // Todos los demás tienen texto blanco
     return '#fff';
   }
 
@@ -305,7 +306,6 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
   isEntradaServida(order: Order, entrada: string): boolean {
     if (!order.entradasServidas) return false;
 
-    // Si llega como string JSON del backend, parsearlo
     let servidas: string[] = [];
     if (typeof order.entradasServidas === 'string') {
       try {
@@ -324,10 +324,95 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     return servidas.some(s => s.toLowerCase().trim() === entradaNorm);
   }
 
-  // Verifica si el grupo tiene al menos una orden "para llevar"
   hasParaLlevar(group: any): boolean {
-    return group.orders.some((o: Order) => o.isParaLlevar === true);
+    return group.orders.some((o: Order) => o.isParaLlevar === true || o.tableNumber === 0 || o.tableNumber > 100);
   }
 
-  
+  getSegundos(order: any): string[] {
+    if (!order.detalle) return [];
+
+    const partes = order.detalle.split(/Segundos/i);
+    if (partes.length < 2) return [];
+
+    return partes[1]
+      .split('\n')
+      .map((x: string) => x.trim())
+      .filter((x: string) => x && !x.toLowerCase().includes('ronda'));
+  }
+  // ✅ NUEVA LÓGICA: Combina el string de entradas con el JSON de servidas para obtener la fracción
+ // ✅ LÓGICA CORREGIDA: Ahora soporta saltos de línea (\n) y múltiples formatos
+  getEntradasStatus(order: any): { name: string, total: number, servidas: number }[] {
+    if (!order.entradas) return [];
+    
+    const trimmed = order.entradas.trim();
+    let itemsRaw: string[] = [];
+    
+    // 1. Intentar parsear como JSON o dividir por comas, punto y coma, o saltos de línea (\n)
+    if (trimmed.startsWith('[')) {
+      try {
+        itemsRaw = JSON.parse(trimmed);
+      } catch {
+        itemsRaw = trimmed.split(/[,;\n]+/);
+      }
+    } else {
+      itemsRaw = trimmed.split(/[,;\n]+/);
+    }
+    
+    // Limpiar espacios vacíos
+    itemsRaw = itemsRaw.map((e: string) => e.trim()).filter((e: string) => e.length > 0);
+    
+    // 2. Obtener las ya servidas desde el backend
+    let servidasArray: string[] = [];
+    if (order.entradasServidas) {
+      try {
+        servidasArray = typeof order.entradasServidas === 'string' 
+          ? JSON.parse(order.entradasServidas) 
+          : order.entradasServidas;
+      } catch { }
+    }
+    
+    // Normalizar para poder cruzar datos sin importar mayúsculas
+    const servidasNorm = servidasArray.map(s => s.toLowerCase().trim());
+    const result = [];
+    
+    // 3. Formatear cada entrada por separado
+    for (const raw of itemsRaw) {
+      let total = 1;
+      let name = raw;
+      
+      // Buscar formato "2x ensalada rusa" o "2 x ensalada rusa"
+      const matchPre = raw.match(/^\s*(\d+)\s*x\s+(.+)$/i);
+      if (matchPre) {
+        total = parseInt(matchPre[1], 10);
+        name = matchPre[2].trim();
+      } else {
+        // Buscar formato "ensalada rusa x2" (por si algún mozo lo escribe así)
+        const matchSuf = raw.match(/(.+)\s*x\s*(\d+)$/i);
+        if (matchSuf) {
+          total = parseInt(matchSuf[2], 10);
+          name = matchSuf[1].trim();
+        }
+      }
+      
+      const nameNorm = name.toLowerCase().trim();
+      let servidasCount = 0;
+      
+      // Contar cuántas unidades de ESTE plato específico ya salieron
+      for (let i = 0; i < total; i++) {
+        const idx = servidasNorm.indexOf(nameNorm);
+        if (idx >= 0) {
+          servidasCount++;
+          servidasNorm.splice(idx, 1); // Lo quitamos para no contarlo doble
+        }
+      }
+      
+      result.push({
+        name: name,
+        total: total,
+        servidas: servidasCount
+      });
+    }
+    
+    return result;
+  }
 }
