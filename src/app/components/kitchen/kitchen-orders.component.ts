@@ -359,7 +359,9 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     }
     
     // Limpiar espacios vacíos
-    itemsRaw = itemsRaw.map((e: string) => e.trim()).filter((e: string) => e.length > 0);
+    itemsRaw = itemsRaw.map((e: string) => e.trim()).filter((e: string) => {
+      return e.length > 0 && e !== '🔸 NUEVO:';
+    });
     
     // 2. Obtener las ya servidas desde el backend
     let servidasArray: string[] = [];
@@ -414,5 +416,65 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     }
     
     return result;
+  }
+
+  // ✅ NUEVA LÓGICA: Construye las rondas exactas leyendo el historial de la BD
+  getValidRounds(order: any): any[] | null {
+    if (!order.history) return null;
+    
+    // Filtramos las acciones que agregaron platos
+    const addActions = order.history.filter((h: any) => h.action === 'Inicial' || h.action === 'Agregado');
+    
+    // Si solo hay 1 envío, no mostramos "Rondas", mostramos la lista plana normal
+    if (addActions.length <= 1) return null;
+
+    const rounds: any[] = [];
+    let roundNum = 1;
+
+    for (let i = 0; i < addActions.length; i++) {
+      const h = addActions[i];
+      let itemsInRound: any[] = [];
+      
+      if (h.itemsAdded) {
+        try {
+          const parsed = JSON.parse(h.itemsAdded);
+          itemsInRound = parsed.map((p: any) => {
+            const realItem = order.items?.find((oi: any) => oi.productId === p.productId);
+            return {
+              quantity: p.quantity,
+              product: realItem?.product || { name: 'Producto #' + p.productId },
+              servedQuantity: realItem?.servedQuantity || 0
+            };
+          });
+        } catch (e) {}
+      }
+      
+      // Rescatar modificaciones (editados/eliminados) que pertenezcan a esta ronda
+      const changes = order.history.filter((ch: any) => 
+          (ch.action === 'Modificado' || ch.action === 'Cancelado') && 
+          ch.roundNumber === roundNum
+      ).map((ch: any) => {
+          try {
+              const parsed = JSON.parse(ch.itemsAdded)[0];
+              return {
+                  action: ch.action,
+                  productName: parsed.productName || parsed.product?.name,
+                  oldQuantity: parsed.oldQuantity,
+                  newQuantity: parsed.quantity
+              };
+          } catch(e) { return null; }
+      }).filter((ch: any) => ch !== null);
+
+      rounds.push({
+        roundNumber: roundNum,
+        createdAt: h.createdAt,
+        isLatest: i === addActions.length - 1,
+        items: itemsInRound,
+        changes: changes
+      });
+      
+      roundNum++;
+    }
+    return rounds;
   }
 }

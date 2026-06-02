@@ -146,13 +146,11 @@
           <!-- SECCIÓN DE SEGUNDOS / RONDAS -->
           <div class="rounds-section">
 
-            <!-- CASO 1: LA ORDEN TIENE RONDAS REGISTRADAS -->
-            <ng-container *ngIf="order.rounds && order.rounds.length > 0; else noRounds">
+            <ng-container *ngIf="getValidRounds(order) as rounds; else noRounds">
               <div class="section-label">Segundos</div>
 
-              <div *ngFor="let round of order.rounds" class="round-block" [class.round-old]="!round.isLatest" [class.round-new]="round.isLatest" [class.round-has-changes]="round.changes && round.changes.length > 0">
+              <div *ngFor="let round of rounds" class="round-block" [class.round-old]="!round.isLatest" [class.round-new]="round.isLatest" [class.round-has-changes]="round.changes && round.changes.length > 0">
                 
-                <!-- Encabezado de la Ronda -->
                 <div class="round-header" [class.round-header-old]="!round.isLatest" [class.round-header-new]="round.isLatest">
                   <div class="round-header-left">
                     <div class="round-dot" [class.dot-old]="!round.isLatest" [class.dot-new]="round.isLatest"></div>
@@ -165,50 +163,27 @@
                   <span class="round-time">{{ formatTime(round.createdAt) }}</span>
                 </div>
 
-                <!-- Items dentro de la Ronda -->
                 <div class="round-items">
-                  <ng-container *ngIf="round.items && round.items.length > 0; else fallbackSegundos">
-                    <div *ngFor="let item of round.items" class="item-row" [class.item-served]="(item.servedQuantity ?? 0) >= item.quantity">
-                      <span class="item-qty" [class.item-qty-new]="round.isLatest">
-                        {{ item.quantity }}x
-                      </span>
-                      
-                      <span class="item-name" [class.item-name-served]="(item.servedQuantity ?? 0) >= item.quantity">
-                        {{ getProductName(item) }}
-                      </span>
+                  <div *ngFor="let item of round.items" class="item-row" [class.item-served]="(item.servedQuantity ?? 0) >= item.quantity">
+                    <span class="item-qty" [class.item-qty-new]="round.isLatest">
+                      {{ item.quantity }}x
+                    </span>
+                    <span class="item-name" [class.item-name-served]="(item.servedQuantity ?? 0) >= item.quantity">
+                      {{ getProductName(item) }}
+                    </span>
+                    <span *ngIf="(item.servedQuantity ?? 0) > 0 && (item.servedQuantity ?? 0) < item.quantity" class="item-partial-badge">
+                      {{ item.servedQuantity }}/{{ item.quantity }} servidos
+                    </span>
+                    <span *ngIf="(item.servedQuantity ?? 0) >= item.quantity" class="item-served-badge">✓ servido</span>
+                    <span *ngIf="round.isLatest && (item.servedQuantity ?? 0) < item.quantity" class="item-new-badge">nuevo</span>
+                  </div>
 
-                      <!-- Progreso fraccionado en Rondas -->
-                      <span *ngIf="(item.servedQuantity ?? 0) > 0 && (item.servedQuantity ?? 0) < item.quantity" class="item-partial-badge">
-                        {{ item.servedQuantity }}/{{ item.quantity }} servidos
-                      </span>
-
-                      <span *ngIf="(item.servedQuantity ?? 0) >= item.quantity" class="item-served-badge">✓ servido</span>
-                      <span *ngIf="round.isLatest && (item.servedQuantity ?? 0) < item.quantity" class="item-new-badge">nuevo</span>
-                    </div>
-                  </ng-container>
-
-                  <!-- RECOVERY OPTION: Fallback si la ronda no tiene mapeados sus items independientes -->
-                  <ng-template #fallbackSegundos>
-                    <div *ngFor="let item of order.items" class="item-row" [class.item-served]="(item.servedQuantity ?? 0) >= item.quantity">
-                      <span class="item-qty">{{ item.quantity }}x</span>
-                      <span class="item-name" [class.item-name-served]="(item.servedQuantity ?? 0) >= item.quantity">
-                        {{ item.product?.name }}
-                      </span>
-                      <span *ngIf="(item.servedQuantity ?? 0) > 0 && (item.servedQuantity ?? 0) < item.quantity" class="item-partial-badge">
-                        {{ item.servedQuantity }}/{{ item.quantity }} servidos
-                      </span>
-                      <span *ngIf="(item.servedQuantity ?? 0) >= item.quantity" class="item-served-badge">✓ servido</span>
-                    </div>
-                  </ng-template>
-
-                  <!-- Historial de cambios/ediciones en la ronda -->
                   <ng-container *ngIf="round.changes && round.changes.length > 0">
                     <div class="changes-divider">
                       <span class="changes-label">✏️ cambios</span>
                     </div>
 
                     <div *ngFor="let change of round.changes" class="item-row change-row" [class.change-row-modified]="change.action === 'Modificado'" [class.change-row-cancelled]="change.action === 'Cancelado'">
-                      
                       <ng-container *ngIf="change.action === 'Modificado'">
                         <span class="item-qty item-qty-modified">{{ change.newQuantity }}x</span>
                         <span class="item-name">{{ change.productName }}</span>
@@ -229,22 +204,17 @@
               </div>
             </ng-container>
 
-            <!-- CASO 2: LA ORDEN NO TRABAJA CON RONDAS (SEGUNDOS PLANOS DIRECTOS) - CORREGIDO -->
             <ng-template #noRounds>
               <ng-container *ngIf="order.items && order.items.length > 0">
                 <div class="section-label">Segundos</div>
                 <div *ngFor="let item of order.items" class="item-row" [class.item-served]="(item.servedQuantity ?? 0) >= item.quantity">
                   <span class="item-qty">{{ item.quantity }}x</span>
-                  
                   <span class="item-name" [class.item-name-served]="(item.servedQuantity ?? 0) >= item.quantity">
                     {{ getProductName(item) }}
                   </span>
-                  
-                  <!-- Indicador fraccionado en segundos directos -->
                   <span *ngIf="(item.servedQuantity ?? 0) > 0 && (item.servedQuantity ?? 0) < item.quantity" class="item-partial-badge">
                     {{ item.servedQuantity }}/{{ item.quantity }} servidos
                   </span>
-                  
                   <span *ngIf="(item.servedQuantity ?? 0) >= item.quantity" class="item-served-badge">✓ servido</span>
                 </div>
               </ng-container>
