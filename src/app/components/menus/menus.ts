@@ -3,40 +3,25 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpClientModule, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import QRCode from 'qrcode';
 
-interface Category {
-  id: number;
-  name: string;
-  description: string;
-  sortOrder: number;
-  productCount: number;
-}
+// Tus interfaces anteriores...
+interface Category { id: number; name: string; description: string; sortOrder: number; productCount: number; }
+interface Product { id: number; name: string; description: string; price: number; imageUrl: string; isActive: boolean; categoryId: number; categoryName: string; }
+interface UnsplashPhoto { id: string; urls: { small: string; regular: string }; alt_description: string; user: { name: string }; links: { download_location: string }; }
+interface DailyEntrada { id: number; name: string; date: string; isActive: boolean; createdAt: string; }
 
-interface Product {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  imageUrl: string;
-  isActive: boolean;
-  categoryId: number;
-  categoryName: string;
-}
-
-interface UnsplashPhoto {
-  id: string;
-  urls: { small: string; regular: string };
-  alt_description: string;
-  user: { name: string };
-  links: { download_location: string };
-}
-
-interface DailyEntrada {
-  id: number;
-  name: string;
-  date: string;
-  isActive: boolean;
-  createdAt: string;
+// NUEVA INTERFAZ PARA MENÚ QR
+export interface MenuDelDiaItem {
+  id?: number;
+  categoria: string;
+  nombre: string;
+  descripcion: string;
+  precio: number;
+  tag: string;
+  esDestacado: boolean;
+  orden: number;
 }
 
 @Component({
@@ -47,11 +32,19 @@ interface DailyEntrada {
   styleUrls: ['./menus.css']
 })
 export class MenusComponent implements OnInit {
+@ViewChild('qrCanvas') qrCanvas!: ElementRef<HTMLCanvasElement>;
+// menuPublicoUrl = 'http://localhost:4200/menu'
+// menuPublicoUrl = 'http://192.168.18.82:4200/menu';
+menuPublicoUrl = 'https://menus-comoencasa.netlify.app/';
+
+previewHoy = new Date().toLocaleDateString('es-PE', {
+  weekday: 'long', day: 'numeric', month: 'long'
+});
   private apiUrl = environment.apiUrl;
-
   private unsplashKey = 'GZOeZzgY8sguV5Lb_exuWp4_nqvGfLD6T5eSQARgGpU';
+  
 
-  activeTab: 'categories' | 'products' | 'entradas' = 'categories';
+  activeTab: 'categories' | 'products' | 'entradas' | 'menuQr' = 'categories';
 
   // Categorías
   categories: Category[] = [];
@@ -84,6 +77,12 @@ export class MenusComponent implements OnInit {
   editingEntrada: DailyEntrada | null = null;
   editEntradaName = '';
 
+  // ─── NUEVO: VARIABLES MENÚ QR ───
+  menuQrItems: MenuDelDiaItem[] = [];
+  menuQrLoading = false;
+  qrCategories = ['Entradas', 'Platos de fondo', 'Postres', 'Bebidas', 'Duos'];
+  qrTags = ['', 'Vegetariano', 'Mariscos', 'Chef recomienda'];
+
   // UI
   loading = false;
   deleteConfirm: { type: 'category' | 'product'; id: number; name: string } | null = null;
@@ -94,6 +93,7 @@ export class MenusComponent implements OnInit {
     this.loadCategories();
     this.loadProducts();
     this.loadEntradas();
+    this.loadMenuQr(); // Cargamos el menú QR al inicio
   }
 
   // ─── CATEGORÍAS ──────────────────────────────────────────────
@@ -282,4 +282,110 @@ export class MenusComponent implements OnInit {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
   }
+
+  // ─── NUEVO: GESTIÓN DE MENÚ QR ────────────────────────────────
+  loadMenuQr() {
+    this.http.get<MenuDelDiaItem[]>(`${this.apiUrl}/MenuDelDia`).subscribe({
+      next: (data) => this.menuQrItems = data,
+      error: (e) => console.error('Error cargando menú QR', e)
+    });
+  }
+
+  getMenuQrItems(categoria: string): MenuDelDiaItem[] {
+    return this.menuQrItems.filter(m => m.categoria === categoria);
+  }
+
+  addMenuQrItem(categoria: string) {
+    this.menuQrItems.push({
+      categoria: categoria,
+      nombre: '',
+      descripcion: '',
+      precio: 0,
+      tag: '',
+      esDestacado: false,
+      orden: this.getMenuQrItems(categoria).length + 1
+    });
+  }
+
+  removeMenuQrItem(item: MenuDelDiaItem) {
+    this.menuQrItems = this.menuQrItems.filter(m => m !== item);
+  }
+
+  saveMenuQr() {
+    this.menuQrLoading = true;
+    
+    // Recalcular orden para garantizar limpieza
+    let ordenGlobal = 1;
+    this.qrCategories.forEach(cat => {
+      this.getMenuQrItems(cat).forEach(item => {
+        item.orden = ordenGlobal++;
+      });
+    });
+
+    this.http.post(`${this.apiUrl}/MenuDelDia/bulk`, this.menuQrItems).subscribe({
+      next: () => {
+        alert('Menú QR guardado correctamente. Los cambios ya son visibles.');
+        this.menuQrLoading = false;
+        this.loadMenuQr();
+      },
+      error: (e) => {
+        console.error(e);
+        alert('Hubo un error al guardar el menú QR.');
+        this.menuQrLoading = false;
+      }
+    });
+  }
+
+generateQr() {
+  if (!this.qrCanvas?.nativeElement) return;
+  QRCode.toCanvas(this.qrCanvas.nativeElement, this.menuPublicoUrl, {
+    width: 200,
+    margin: 2,
+    color: { dark: '#1A1610', light: '#F7F2EA' }
+  }, (err) => {
+    if (err) console.error('Error generando QR:', err);
+  });
+}
+ 
+/** Permite actualizar la preview en tiempo real cuando el usuario edita */
+refreshPreview() {
+  // Angular detecta el cambio automáticamente con ngModel,
+  // este método existe para engancharlo con (ngModelChange) si necesitas lógica adicional
+}
+ 
+/** Descarga el QR como imagen PNG */
+downloadQr() {
+  QRCode.toDataURL(this.menuPublicoUrl, {
+    width: 400,
+    margin: 2,
+    color: { dark: '#1A1610', light: '#F7F2EA' }
+  }).then((url) => {
+    const link = document.createElement('a');
+    link.download = 'menu-qr-la-terraza.png';
+    link.href = url;
+    link.click();
+  }).catch(err => console.error('Error generando QR:', err));
+}
+ 
+// 4. MODIFICA ngAfterViewInit para generar el QR al cargar
+//    Si tu componente no tiene ngAfterViewInit, agrégalo y añade AfterViewInit en implements:
+ 
+ngAfterViewInit() {
+  // Espera un tick para que Angular renderice el canvas
+  setTimeout(() => this.generateQr(), 100);
+}
+ 
+// 5. TAMBIÉN genera el QR cuando el usuario hace click en el tab menuQr.
+//    Modifica la línea del tab en el HTML así:
+//    (click)="activeTab = 'menuQr'; setTimeout(generateQr.bind(this), 50)"
+//    O más limpio, crea este método y úsalo:
+switchToQrTab() {
+  this.activeTab = 'menuQr';
+  setTimeout(() => this.generateQr(), 80);
+}
+ 
+// 6. En el HTML, cambia el botón del tab QR de:
+//    (click)="activeTab = 'menuQr'"
+// A:
+//    (click)="switchToQrTab()"
 }

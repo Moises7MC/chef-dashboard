@@ -622,3 +622,323 @@ select.form-input { cursor: pointer; }
   white-space: nowrap;
 }
 .btn-cancel-small:hover { background: #e5e7eb; }
+
+/* ══ TAB MENÚ QR (NUEVO) ══════════════════════════════════════ */
+.tab-btn.qr-tab.active { color: #8b5cf6; border-bottom-color: #8b5cf6; }
+.tab-btn.qr-tab.active .tab-badge { background: #ede9fe; color: #8b5cf6; }
+
+.qr-info-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid #bfdbfe;
+}
+
+.qr-grid {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  align-items: start;
+}
+
+.qr-card {
+  padding: 1rem;
+}
+
+.empty-state-small {
+  text-align: center;
+  color: #aaa;
+  font-size: 12px;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 6px;
+  border: 1px dashed #e5e7eb;
+}
+
+.qr-item-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.qr-item-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.qr-item-inputs {
+  flex: 1;
+}
+
+.form-input-sm {
+  padding: 6px 8px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+.qr-destacar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: #d97706;
+}
+
+.d-flex { display: flex; }
+.justify-content-between { justify-content: space-between; }
+.align-items-center { align-items: center; }
+.gap-2 { gap: 8px; }
+.w-100 { width: 100%; }
+.w-50 { width: 50%; }
+.w-25 { width: 25%; }
+.mb-1 { margin-bottom: 4px; }
+.mb-3 { margin-bottom: 12px; }
+.mt-1 { margin-top: 4px; }
+.pb-2 { padding-bottom: 8px; }
+.ms-2 { margin-left: 8px; }
+.border-bottom { border-bottom: 1px solid #e5e7eb; }
+.text-muted { color: #6b7280; font-size: 11px; }
+.m-0 { margin: 0; }
+
+/* ══ QR LAYOUT (agregar al final de menus.css) ══════════════════════════════ */
+
+.qr-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 1.5rem;
+  align-items: start;
+}
+@media (max-width: 1024px) {
+  .qr-layout { grid-template-columns: 1fr; }
+}
+
+/* ── Editor izquierda ── */
+.qr-editor { min-width: 0; }
+
+/* ── Panel derecho ── */
+.qr-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  position: sticky;
+  top: 1.5rem;
+}
+
+/* ── QR Box ── */
+.qr-box {
+  background: #fff;
+  border: 1px solid #ebebeb;
+  border-radius: 14px;
+  padding: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+}
+.qr-box-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  width: 100%;
+}
+.qr-canvas {
+  border-radius: 8px;
+  border: 1px solid #f0ece4;
+}
+.qr-url {
+  font-size: 10px;
+  color: #aaa;
+  word-break: break-all;
+  text-align: center;
+  background: #f9f9f9;
+  border-radius: 6px;
+  padding: 5px 10px;
+  width: 100%;
+}
+.qr-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.btn-qr-download {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px;
+  background: linear-gradient(90deg, #f97316, #ef4444);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  text-decoration: none;
+}
+.btn-qr-download:hover { opacity: 0.88; }
+.btn-qr-open {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px;
+  background: #f3f4f6;
+  color: #444;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.btn-qr-open:hover { background: #e5e7eb; }
+
+/* ── Preview phone ── */
+.preview-box {
+  background: #fff;
+  border: 1px solid #ebebeb;
+  border-radius: 14px;
+  padding: 1.2rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+}
+.preview-box-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 1rem;
+}
+.preview-phone {
+  background: #1A1610;
+  border-radius: 20px;
+  padding: 8px;
+  box-shadow: 0 8px 28px rgba(26,22,16,0.25);
+}
+.phone-screen {
+  background: #F7F2EA;
+  border-radius: 14px;
+  overflow-y: auto;
+  max-height: 480px;
+}
+
+/* Preview header */
+.preview-header {
+  background: #1A1610;
+  color: #F7F2EA;
+  padding: 14px 12px 12px;
+  text-align: center;
+  border-radius: 14px 14px 0 0;
+}
+.preview-restaurant-name {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.3rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.preview-restaurant-sub {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: rgba(247,242,234,0.6);
+  margin-top: 2px;
+}
+.preview-date {
+  display: inline-block;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #D4AA5E;
+  border: 1px solid rgba(212,170,94,0.4);
+  padding: 3px 10px;
+  border-radius: 2px;
+  margin-top: 8px;
+}
+
+/* Preview body */
+.preview-body {
+  padding: 10px 12px 14px;
+}
+.preview-section {
+  margin-bottom: 14px;
+}
+.preview-section-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #B8923A;
+  border-bottom: 1px solid rgba(184,146,58,0.25);
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+}
+.preview-dish {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(26,22,16,0.05);
+}
+.preview-dish:last-child { border-bottom: none; }
+.preview-dish-left { flex: 1; }
+.preview-dish-name {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 0.82rem;
+  color: #1A1610;
+  line-height: 1.3;
+}
+.preview-star { color: #B8923A; font-size: 0.65rem; margin-right: 2px; }
+.preview-dish-desc {
+  font-size: 0.62rem;
+  color: #8C8479;
+  font-style: italic;
+  margin-top: 1px;
+}
+.preview-tag {
+  display: inline-block;
+  font-size: 0.52rem;
+  letter-spacing: 0.08em;
+  padding: 1px 6px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  margin-top: 2px;
+  background: #FFF8E8;
+  color: #B8923A;
+}
+.preview-price {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #C4603A;
+  white-space: nowrap;
+}
+.preview-empty {
+  text-align: center;
+  font-size: 11px;
+  color: #bbb;
+  padding: 2rem 1rem;
+  font-style: italic;
+}

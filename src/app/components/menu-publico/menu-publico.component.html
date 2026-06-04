@@ -1,0 +1,86 @@
+<!-- Loading -->
+<div class="loader-wrap" *ngIf="loading">
+  <div class="loader-spinner"></div>
+  <p>Cargando menú...</p>
+</div>
+
+<!-- Error -->
+<div class="error-wrap" *ngIf="error && !loading">
+  <span>⚠️</span>
+  <p>No se pudo cargar el menú. Intenta de nuevo.</p>
+</div>
+
+<!-- Menú -->
+<div class="menu-page" *ngIf="!loading && !error">
+
+  <header class="menu-header">
+    <div class="header-deco"></div>
+    <div class="restaurant-name">La Terraza</div>
+    <div class="restaurant-sub">Cocina de temporada &nbsp;·&nbsp; Desde 1998</div>
+    <div class="date-badge">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      {{ hoy }}
+    </div>
+  </header>
+
+  <main class="menu-body">
+
+    <ng-container *ngFor="let cat of categorias">
+      <section class="menu-section" *ngIf="hasItems(cat)">
+
+        <div class="section-header">
+          <span class="section-icon">{{ getCategoriaIcon(cat) }}</span>
+          <h2 class="section-title">{{ cat }}</h2>
+          <div class="section-line"></div>
+        </div>
+
+        <div class="dish-list">
+          <div
+            class="dish-item"
+            [class.highlighted]="item.esDestacado"
+            *ngFor="let item of getItems(cat)">
+
+            <div class="dish-star" *ngIf="item.esDestacado">★</div>
+
+            <div class="dish-info">
+              <div class="dish-name">{{ item.nombre }}</div>
+              <div class="dish-desc" *ngIf="item.descripcion">{{ item.descripcion }}</div>
+              <div class="dish-tags" *ngIf="item.tag">
+                <span class="tag" [ngClass]="{
+                  'tag-v': item.tag === 'Vegetariano',
+                  'tag-m': item.tag === 'Mariscos',
+                  'tag-s': item.tag === 'Chef recomienda'
+                }">{{ item.tag }}</span>
+              </div>
+            </div>
+
+            <div class="dish-price" *ngIf="item.precio > 0">S/. {{ item.precio.toFixed(2) }}</div>
+          </div>
+        </div>
+
+      </section>
+    </ng-container>
+
+    <!-- Sin platos -->
+    <div class="no-menu" *ngIf="items.length === 0">
+      <div class="no-menu-icon">🍽️</div>
+      <p>El menú de hoy aún no está disponible.</p>
+      <span>Vuelve en unos minutos</span>
+    </div>
+
+  </main>
+
+  <footer class="menu-footer">
+    <div class="legend">
+      <span>🟢 Vegetariano</span>
+      <span>🟠 Mariscos</span>
+      <span>⭐ Chef recomienda</span>
+    </div>
+    <p>Precios en soles · IVA incluido</p>
+    <p>Informe a su mesero sobre alergias alimentarias</p>
+    <div class="footer-logo">La Terraza</div>
+  </footer>
+
+</div>

@@ -8,6 +8,11 @@ export const routes: Routes = [
     loadComponent: () => import('./components/login/login.component').then(m => m.LoginComponent),
     canActivate: [noAuthGuard]
   },
+  // Ruta pública para comensales (el QR apunta aquí)
+  {
+    path: 'menu',
+    loadComponent: () => import('./components/menu-publico/menu-publico.component').then(m => m.MenuPublicoComponent)
+  },
   {
     path: 'dashboard',
     loadComponent: () => import('./components/dashboard/dashboard').then(m => m.DashboardComponent),
@@ -34,7 +39,6 @@ export const routes: Routes = [
         path: 'caja',
         loadComponent: () => import('./components/caja/caja').then(m => m.CajaComponent)
       },
-      // ✅ NUEVO: Reportes
       {
         path: 'reports',
         loadComponent: () => import('./components/reports/reports').then(m => m.ReportsComponent)

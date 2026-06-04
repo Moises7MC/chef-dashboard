@@ -1,0 +1,115 @@
+<header class="header">
+  <div class="restaurant-name">La Terraza</div>
+  <div class="restaurant-sub">Cocina de temporada &nbsp;·&nbsp; Desde 1998</div>
+</header>
+
+<div class="date-section">
+  <div class="date-badge">Menú del día &nbsp;·&nbsp; <span>{{ fechaHoy }}</span></div>
+</div>
+
+<div class="menu-container">
+
+  <div class="section" *ngIf="getItems('Entradas').length > 0">
+    <div class="section-header">
+      <div class="section-icon">🥗</div>
+      <div class="section-title">Entradas</div>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="dish" *ngFor="let item of getItems('Entradas')" [class.highlight]="item.esDestacado">
+      <div class="dish-info">
+        <div class="dish-name">{{ item.nombre }}</div>
+        <div class="dish-desc" *ngIf="item.descripcion">{{ item.descripcion }}</div>
+        <div class="dish-tags" *ngIf="item.tag">
+          <span class="tag" [ngClass]="getTagClass(item.tag)">{{ item.tag }}</span>
+        </div>
+      </div>
+      <div class="dish-price" *ngIf="item.precio > 0">S/.{{ item.precio.toFixed(2) }}</div>
+    </div>
+  </div>
+
+  <div class="section" *ngIf="getItems('Platos Fuertes').length > 0">
+    <div class="section-header">
+      <div class="section-icon">🍽️</div>
+      <div class="section-title">Platos Fuertes</div>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="dish" *ngFor="let item of getItems('Platos Fuertes')" [class.highlight]="item.esDestacado">
+      <div class="dish-info">
+        <div class="dish-name">{{ item.nombre }}</div>
+        <div class="dish-desc" *ngIf="item.descripcion">{{ item.descripcion }}</div>
+        <div class="dish-tags" *ngIf="item.tag">
+          <span class="tag" [ngClass]="getTagClass(item.tag)">{{ item.tag }}</span>
+        </div>
+      </div>
+      <div class="dish-price" *ngIf="item.precio > 0">S/.{{ item.precio.toFixed(2) }}</div>
+    </div>
+  </div>
+
+  <div class="section" *ngIf="getItems('Postres').length > 0">
+    <div class="section-header">
+      <div class="section-icon">🍮</div>
+      <div class="section-title">Postres</div>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="dish" *ngFor="let item of getItems('Postres')" [class.highlight]="item.esDestacado">
+      <div class="dish-info">
+        <div class="dish-name">{{ item.nombre }}</div>
+        <div class="dish-desc" *ngIf="item.descripcion">{{ item.descripcion }}</div>
+        <div class="dish-tags" *ngIf="item.tag">
+          <span class="tag" [ngClass]="getTagClass(item.tag)">{{ item.tag }}</span>
+        </div>
+      </div>
+      <div class="dish-price" *ngIf="item.precio > 0">S/.{{ item.precio.toFixed(2) }}</div>
+    </div>
+  </div>
+
+  <div class="section" *ngIf="getItems('Bebidas').length > 0">
+    <div class="section-header">
+      <div class="section-icon">🥤</div>
+      <div class="section-title">Bebidas</div>
+      <div class="section-line"></div>
+    </div>
+    
+    <div class="drinks-grid">
+      <div class="drink-item" *ngFor="let item of getItems('Bebidas')">
+        <span class="drink-name">{{ item.nombre }}</span>
+        <span class="drink-price" *ngIf="item.precio > 0">S/.{{ item.precio.toFixed(2) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" *ngIf="getItems('Menú Completo').length > 0">
+    <div class="section-header">
+      <div class="section-icon">⭐</div>
+      <div class="section-title">Menú Completo</div>
+      <div class="section-line"></div>
+    </div>
+    
+    <div class="combo-box" *ngFor="let item of getItems('Menú Completo')">
+      <div class="combo-label">{{ item.nombre }}</div>
+      <div class="combo-includes" *ngIf="item.descripcion">
+        <span style="white-space: pre-line;">{{ item.descripcion }}</span>
+      </div>
+      <div class="combo-price" *ngIf="item.precio > 0">S/.{{ item.precio.toFixed(2) }}</div>
+      <div class="combo-price-note">Por persona</div>
+    </div>
+  </div>
+
+</div>
+
+<footer class="footer">
+  <div class="legend">
+    <div class="legend-item">🟢 Vegetariano</div>
+    <div class="legend-item">🟠 Mariscos</div>
+    <div class="legend-item">⭐ Chef recomienda</div>
+  </div>
+  <div class="footer-note">
+    Precios en Soles (S/.)<br>
+    Informe a su mesero sobre alergias alimentarias<br>
+    Disponibilidad sujeta a existencias
+  </div>
+  <div class="footer-logo">La Terraza</div>
+</footer>

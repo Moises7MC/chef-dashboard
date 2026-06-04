@@ -1,6 +1,5 @@
 <div class="menus-page">
 
-  <!-- HEADER -->
   <div class="page-header">
     <div>
       <h1 class="page-title">Gestión de Menús</h1>
@@ -8,7 +7,6 @@
     </div>
   </div>
 
-  <!-- TABS -->
   <div class="tabs">
     <button class="tab-btn" [class.active]="activeTab === 'categories'" (click)="activeTab = 'categories'">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
@@ -25,9 +23,18 @@
       Entradas del día
       <span class="tab-badge">{{ entradas.length }}</span>
     </button>
+    <button class="tab-btn qr-tab" [class.active]="activeTab === 'menuQr'" (click)="activeTab = 'menuQr'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7"></rect>
+        <rect x="14" y="3" width="7" height="7"></rect>
+        <rect x="14" y="14" width="7" height="7"></rect>
+        <rect x="3" y="14" width="7" height="7"></rect>
+      </svg>
+      Menú QR
+      <span class="tab-badge" *ngIf="menuQrItems.length > 0">{{ menuQrItems.length }}</span>
+    </button>
   </div>
 
-  <!-- ══════════════ TAB: CATEGORÍAS ══════════════ -->
   <div *ngIf="activeTab === 'categories'" class="tab-content">
     <div class="section-actions">
       <button class="btn-add" (click)="openCategoryModal()">
@@ -67,7 +74,6 @@
     </div>
   </div>
 
-  <!-- ══════════════ TAB: PLATOS ══════════════ -->
   <div *ngIf="activeTab === 'products'" class="tab-content">
     <div class="section-actions">
       <button class="btn-add" (click)="openProductModal()">
@@ -131,10 +137,8 @@
     </div>
   </div>
 
-  <!-- ══════════════ TAB: ENTRADAS DEL DÍA ══════════════ -->
   <div *ngIf="activeTab === 'entradas'" class="tab-content">
 
-    <!-- Fecha de hoy -->
     <div class="entradas-date-bar">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/>
@@ -142,7 +146,6 @@
       <span>{{ getTodayLabel() }}</span>
     </div>
 
-    <!-- Agregar nueva entrada -->
     <div class="entrada-add-row">
       <input
         type="text"
@@ -158,11 +161,9 @@
     </div>
     <div class="form-error" *ngIf="entradaError">{{ entradaError }}</div>
 
-    <!-- Lista de entradas del día -->
     <div class="entradas-list" *ngIf="entradas.length > 0">
       <div class="entrada-item" *ngFor="let entrada of entradas">
 
-        <!-- Modo edición -->
         <ng-container *ngIf="editingEntrada?.id === entrada.id">
           <div class="entrada-edit-row">
             <input
@@ -177,7 +178,6 @@
           </div>
         </ng-container>
 
-        <!-- Modo vista -->
         <ng-container *ngIf="editingEntrada?.id !== entrada.id">
           <div class="entrada-info">
             <div class="entrada-dot"></div>
@@ -196,7 +196,6 @@
       </div>
     </div>
 
-    <!-- Empty state -->
     <div class="empty-state" *ngIf="entradas.length === 0">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
       <p>No hay entradas definidas para hoy</p>
@@ -204,138 +203,165 @@
     </div>
 
   </div>
-</div>
 
-<!-- ══════════════ MODAL CATEGORÍA ══════════════ -->
-<div class="modal-overlay" *ngIf="showCategoryModal" (click)="showCategoryModal = false">
-  <div class="modal" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h2>{{ editingCategory ? 'Editar Categoría' : 'Nueva Categoría' }}</h2>
-      <button class="modal-close" (click)="showCategoryModal = false">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-      </button>
+ <!-- Reemplaza el bloque <div *ngIf="activeTab === 'menuQr'" class="tab-content"> en menus.html -->
+
+<div *ngIf="activeTab === 'menuQr'" class="tab-content">
+
+  <!-- Fila superior: acciones + alerta -->
+  <div class="section-actions d-flex justify-content-between align-items-center w-100 mb-3">
+    <div class="qr-info-alert">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+      </svg>
+      Los platos guardados aquí se mostrarán inmediatamente en el QR público de la mesa.
     </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>Nombre *</label>
-        <input type="text" [(ngModel)]="categoryForm.name" placeholder="Ej: Guisos, Fritos, Mariscos..." class="form-input" autofocus>
-      </div>
-      <div class="form-group">
-        <label>Descripción</label>
-        <input type="text" [(ngModel)]="categoryForm.description" placeholder="Descripción breve" class="form-input">
-      </div>
-      <div class="form-group">
-        <label>Orden de aparición</label>
-        <input type="number" [(ngModel)]="categoryForm.sortOrder" min="1" class="form-input small">
-      </div>
-      <div class="form-error" *ngIf="categoryError">{{ categoryError }}</div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-cancel" (click)="showCategoryModal = false">Cancelar</button>
-      <button class="btn-save" (click)="saveCategory()" [disabled]="loading">
-        {{ loading ? 'Guardando...' : (editingCategory ? 'Actualizar' : 'Crear') }}
-      </button>
-    </div>
+    <button class="btn-save" (click)="saveMenuQr()" [disabled]="menuQrLoading">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" *ngIf="!menuQrLoading">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+        <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+      </svg>
+      {{ menuQrLoading ? 'Guardando...' : 'Guardar Menú QR' }}
+    </button>
   </div>
-</div>
 
-<!-- ══════════════ MODAL PLATO ══════════════ -->
-<div class="modal-overlay" *ngIf="showProductModal" (click)="showProductModal = false">
-  <div class="modal modal-wide" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h2>{{ editingProduct ? 'Editar Plato' : 'Nuevo Plato' }}</h2>
-      <button class="modal-close" (click)="showProductModal = false">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <div class="modal-body modal-two-col">
-      <div class="form-col">
-        <div class="form-group">
-          <label>Nombre *</label>
-          <input type="text" [(ngModel)]="productForm.name" placeholder="Ej: Ceviche mixto" class="form-input"
-            (ngModelChange)="unsplashQuery = $event">
-        </div>
-        <div class="form-group">
-          <label>Descripción</label>
-          <input type="text" [(ngModel)]="productForm.description" placeholder="Ingredientes o descripción" class="form-input">
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Precio (S/.) *</label>
-            <input type="number" [(ngModel)]="productForm.price" min="0" step="0.50" class="form-input">
-          </div>
-          <div class="form-group">
-            <label>Categoría *</label>
-            <select [(ngModel)]="productForm.categoryId" class="form-input">
-              <option [value]="0" disabled>Seleccionar...</option>
-              <option *ngFor="let cat of categories" [value]="cat.id">{{ cat.name }}</option>
-            </select>
-          </div>
-        </div>
-        <div class="image-preview-wrap" *ngIf="productForm.imageUrl">
-          <label>Imagen seleccionada</label>
-          <div class="image-preview">
-            <img [src]="productForm.imageUrl" alt="preview">
-            <button class="remove-image" (click)="productForm.imageUrl = ''">✕</button>
-          </div>
-        </div>
-        <div class="form-error" *ngIf="productError">{{ productError }}</div>
-      </div>
-      <div class="unsplash-col">
-        <label class="unsplash-label">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 6.75V0h9v6.75h-9zm9 3.75H24V24H0V10.5h7.5v6.75h9V10.5z"/></svg>
-          Agregar imagen
-        </label>
-        <div class="unsplash-search">
-          <input type="text" [(ngModel)]="unsplashQuery" placeholder="Buscar..." class="form-input"
-            (keyup.enter)="searchUnsplash()">
-          <button class="btn-search" (click)="searchUnsplash()" [disabled]="unsplashLoading">
-            {{ unsplashLoading ? '...' : 'Buscar' }}
-          </button>
-        </div>
-        <div class="unsplash-grid" *ngIf="unsplashResults.length > 0">
-          <div class="unsplash-photo" *ngFor="let photo of unsplashResults"
-            [class.selected]="productForm.imageUrl === photo.urls.regular"
-            (click)="selectPhoto(photo)">
-            <img [src]="photo.urls.small" [alt]="photo.alt_description">
-            <div class="photo-overlay" *ngIf="productForm.imageUrl === photo.urls.regular">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+  <!-- Layout: Editor izquierda | QR + preview derecha -->
+  <div class="qr-layout">
+
+    <!-- ── EDITOR DE PLATOS ── -->
+    <div class="qr-editor">
+      <div class="cards-grid qr-grid">
+        <div class="category-card qr-card" *ngFor="let cat of qrCategories">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+              <h3 class="card-title m-0">{{ cat }}</h3>
+              <button class="btn-icon edit" (click)="addMenuQrItem(cat)" title="Añadir a {{ cat }}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+              </button>
+            </div>
+
+            <div *ngIf="getMenuQrItems(cat).length === 0" class="empty-state-small">Sin platos</div>
+
+            <div class="qr-item-row" *ngFor="let item of getMenuQrItems(cat)">
+              <div class="qr-item-inputs">
+                <input type="text" class="form-input form-input-sm mb-1" [(ngModel)]="item.nombre" placeholder="Nombre (Ej. Arroz con Pollo)" (ngModelChange)="refreshPreview()">
+                <input type="text" class="form-input form-input-sm text-muted mb-1" [(ngModel)]="item.descripcion" placeholder="Descripción corta (Opcional)" (ngModelChange)="refreshPreview()">
+                <div class="d-flex gap-2 align-items-center mt-1">
+                  <span style="font-size:11px;font-weight:600;color:#555">S/.</span>
+                  <input type="number" class="form-input form-input-sm w-25" [(ngModel)]="item.precio" placeholder="Precio" (ngModelChange)="refreshPreview()">
+                  <select class="form-input form-input-sm w-50" [(ngModel)]="item.tag" (ngModelChange)="refreshPreview()">
+                    <option *ngFor="let tag of qrTags" [value]="tag">{{ tag === '' ? 'Sin Etiqueta' : tag }}</option>
+                  </select>
+                  <label class="qr-destacar" title="Destacar con estrella dorada">
+                    <input type="checkbox" [(ngModel)]="item.esDestacado" (ngModelChange)="refreshPreview()">
+                    ⭐
+                  </label>
+                </div>
+              </div>
+              <button class="btn-icon delete ms-2" (click)="removeMenuQrItem(item); refreshPreview()" title="Quitar plato">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                  <path d="M10 11v6M14 11v6"/>
+                </svg>
+              </button>
             </div>
           </div>
         </div>
-        <div class="unsplash-empty" *ngIf="unsplashSearched && unsplashResults.length === 0 && !unsplashLoading">
-          No se encontraron imágenes
-        </div>
-        <div class="unsplash-hint" *ngIf="!unsplashSearched">
-          Escribe el nombre del plato y presiona Buscar
-        </div>
-        <p class="unsplash-credit" *ngIf="unsplashResults.length > 0">Fotos de <a href="https://unsplash.com" target="_blank">Unsplash</a></p>
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn-cancel" (click)="showProductModal = false">Cancelar</button>
-      <button class="btn-save" (click)="saveProduct()" [disabled]="loading">
-        {{ loading ? 'Guardando...' : (editingProduct ? 'Actualizar' : 'Crear') }}
-      </button>
+
+    <!-- ── PANEL DERECHO: QR + PREVIEW ── -->
+    <div class="qr-panel">
+
+      <!-- QR -->
+      <div class="qr-box">
+        <div class="qr-box-header">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          Código QR de la mesa
+        </div>
+        <canvas #qrCanvas class="qr-canvas"></canvas>
+        <div class="qr-url">{{ menuPublicoUrl }}</div>
+        <div class="qr-actions">
+          <button class="btn-qr-download" (click)="downloadQr()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Descargar QR
+          </button>
+          <a [href]="menuPublicoUrl" target="_blank" class="btn-qr-open">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+              <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+            Ver página
+          </a>
+        </div>
+      </div>
+
+      <!-- Preview del menú -->
+      <div class="preview-box">
+        <div class="preview-box-header">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+          Previsualización del menú
+        </div>
+        <div class="preview-phone">
+          <div class="phone-screen">
+            <div class="preview-header">
+              <div class="preview-restaurant-name">La Terraza</div>
+              <div class="preview-restaurant-sub">Cocina de temporada · Desde 1998</div>
+              <div class="preview-date">{{ previewHoy }}</div>
+            </div>
+            <div class="preview-body">
+              <ng-container *ngFor="let cat of qrCategories">
+                <div class="preview-section" *ngIf="getMenuQrItems(cat).length > 0">
+                  <div class="preview-section-title">{{ cat }}</div>
+                  <div class="preview-dish" *ngFor="let item of getMenuQrItems(cat)">
+                    <div class="preview-dish-left">
+                      <div class="preview-dish-name">
+                        <span *ngIf="item.esDestacado" class="preview-star">★</span>
+                        {{ item.nombre || 'Sin nombre' }}
+                      </div>
+                      <div class="preview-dish-desc" *ngIf="item.descripcion">{{ item.descripcion }}</div>
+                      <span *ngIf="item.tag" class="preview-tag">{{ item.tag }}</span>
+                    </div>
+                    <div class="preview-price" *ngIf="item.precio > 0">S/. {{ item.precio.toFixed(2) }}</div>
+                  </div>
+                </div>
+              </ng-container>
+              <div class="preview-empty" *ngIf="menuQrItems.length === 0">
+                Agrega platos para ver la previsualización
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
+  
+</div>
 
-<!-- ══════════════ MODAL CONFIRMAR ELIMINAR ══════════════ -->
+<div class="modal-overlay" *ngIf="showCategoryModal" (click)="showCategoryModal = false">
+  <div class="modal" (click)="$event.stopPropagation()">
+    </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showProductModal" (click)="showProductModal = false">
+  <div class="modal modal-wide" (click)="$event.stopPropagation()">
+    </div>
+</div>
+
 <div class="modal-overlay" *ngIf="deleteConfirm" (click)="deleteConfirm = null">
   <div class="modal modal-small" (click)="$event.stopPropagation()">
-    <div class="modal-header danger">
-      <h2>Confirmar eliminación</h2>
     </div>
-    <div class="modal-body">
-      <p class="delete-message">
-        ¿Estás seguro que deseas eliminar <strong>{{ deleteConfirm?.name }}</strong>?
-        <span *ngIf="deleteConfirm?.type === 'category'"> Esta acción no se puede deshacer si no tiene platos asociados.</span>
-      </p>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-cancel" (click)="deleteConfirm = null">Cancelar</button>
-      <button class="btn-delete" (click)="executeDelete()">Eliminar</button>
-    </div>
-  </div>
 </div>
