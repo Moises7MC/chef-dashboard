@@ -101,36 +101,25 @@ export class OrderService {
     return `Producto #${productId}`;
   }
 
-  private initializeConnection(): void {
-    this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl(`${API_URL}/hubs/orders`)
-      .withAutomaticReconnect()
-      .build();
+ private initializeConnection(): void {
+  this.hubConnection = new signalR.HubConnectionBuilder()
+    .withUrl(`${API_URL}/hubs/orders`)
+    .withAutomaticReconnect()
+    .build();
 
-    this.hubConnection.on('NuevoPedido', () => {
-      this.loadOrders();
-    });
+  this.hubConnection.on('NuevoPedido', () => { this.loadOrders(); });
+  this.hubConnection.on('PedidoListo', () => { this.loadOrders(); });
+  this.hubConnection.on('ActualizacionPedido', () => { this.loadOrders(); });
+  this.hubConnection.on('OrderStatusChanged', () => { this.loadOrders(); });
+  this.hubConnection.on('ItemServed', () => { this.loadOrders(); });
+  this.hubConnection.on('EntradaServida', () => { this.loadOrders(); });
 
-    this.hubConnection.on('PedidoListo', () => {
-      this.loadOrders();
-    });
-
-    this.hubConnection.on('ActualizacionPedido', () => {
-      this.loadOrders();
-    });
-
-    this.hubConnection.on('OrderStatusChanged', () => {
-      this.loadOrders();
-    });
-
-    this.hubConnection.on('ItemServed', () => {
-      this.loadOrders();
-    });
-
-    this.hubConnection.on('EntradaServida', () => {
-      this.loadOrders();
-    });
-  }
+  // ✅ AGREGA ESTO:
+  this.hubConnection.onreconnected(() => {
+    console.log('🔄 Reconectado al servidor');
+    this.hubConnection!.invoke('JoinKitchenGroup').catch(console.error);
+  });
+}
 
   loadOrders(): Promise<void> {
     return new Promise((resolve, reject) => {

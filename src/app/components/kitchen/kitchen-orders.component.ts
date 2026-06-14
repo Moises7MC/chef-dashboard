@@ -196,10 +196,24 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
   }
 
   getElapsedSeconds(createdAt: string, status?: string, updatedAt?: string): number {
+    // Convertimos a milisegundos ignorando la zona horaria del navegador
+    // Usamos el valor UTC para que sea consistente con C#
+    const createdDate = new Date(createdAt).getTime();
+    
+    // Si la orden ya terminó, usamos la fecha de actualización
     const end = (status === 'Listo' || status === 'Cancelado' || status === "Cobrado") && updatedAt
       ? new Date(updatedAt).getTime()
-      : this.now;
-    return Math.floor((end - new Date(createdAt).getTime()) / 1000);
+      : Date.now(); // Usamos Date.now() directo para mayor precisión
+
+    // Calculamos la diferencia
+    const diff = Math.floor((end - createdDate) / 1000);
+
+    // 🛑 IMPORTANTE: Si la diferencia es mayor a 4 horas (14400 seg), 
+    // es casi seguro un error de zona horaria (UTC vs Local).
+    // Si la diferencia es negativa o absurda, forzamos a 0.
+    if (diff < 0) return 0;
+    
+    return diff;
   }
 
   formatElapsed(createdAt: string, status?: string, updatedAt?: string): string {

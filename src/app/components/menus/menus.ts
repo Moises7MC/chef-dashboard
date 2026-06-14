@@ -1,28 +1,16 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpClientModule, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import QRCode from 'qrcode';
 
-// Tus interfaces anteriores...
+// ─── INTERFACES ───
 interface Category { id: number; name: string; description: string; sortOrder: number; productCount: number; }
 interface Product { id: number; name: string; description: string; price: number; imageUrl: string; isActive: boolean; categoryId: number; categoryName: string; }
 interface UnsplashPhoto { id: string; urls: { small: string; regular: string }; alt_description: string; user: { name: string }; links: { download_location: string }; }
 interface DailyEntrada { id: number; name: string; date: string; isActive: boolean; createdAt: string; }
-
-// NUEVA INTERFAZ PARA MENÚ QR
-export interface MenuDelDiaItem {
-  id?: number;
-  categoria: string;
-  nombre: string;
-  descripcion: string;
-  precio: number;
-  tag: string;
-  esDestacado: boolean;
-  orden: number;
-}
+export interface MenuDelDiaItem { id?: number; categoria: string; nombre: string; descripcion: string; precio: number; tag: string; esDestacado: boolean; orden: number; }
 
 @Component({
   selector: 'app-menus',
@@ -31,30 +19,87 @@ export interface MenuDelDiaItem {
   templateUrl: './menus.html',
   styleUrls: ['./menus.css']
 })
-export class MenusComponent implements OnInit {
-@ViewChild('qrCanvas') qrCanvas!: ElementRef<HTMLCanvasElement>;
-// menuPublicoUrl = 'http://localhost:4200/menu'
-// menuPublicoUrl = 'http://192.168.18.82:4200/menu';
-menuPublicoUrl = 'https://menus-comoencasa.netlify.app/';
+export class MenusComponent implements OnInit, AfterViewInit {
+  @ViewChild('qrCanvas') qrCanvas!: ElementRef<HTMLCanvasElement>;
+  
+  menuPublicoUrl = 'https://menus-comoencasa.netlify.app/';
 
-previewHoy = new Date().toLocaleDateString('es-PE', {
-  weekday: 'long', day: 'numeric', month: 'long'
-});
+  previewHoy = new Date().toLocaleDateString('es-PE', {
+    weekday: 'long', day: 'numeric', month: 'long'
+  });
+  
   private apiUrl = environment.apiUrl;
   private unsplashKey = 'GZOeZzgY8sguV5Lb_exuWp4_nqvGfLD6T5eSQARgGpU';
-  
 
   activeTab: 'categories' | 'products' | 'entradas' | 'menuQr' = 'categories';
 
-  // Categorías
+  // ─── CATEGORÍAS ───
   categories: Category[] = [];
   showCategoryModal = false;
   editingCategory: Category | null = null;
   categoryForm = { name: '', description: '', sortOrder: 0 };
   categoryError = '';
 
-  // Productos
+  // ─── PRODUCTOS Y PAGINACIÓN ───
   products: Product[] = [];
+  filteredProducts: Product[] = []; // Ahora es un arreglo real
+  paginatedProducts: Product[] = []; // Ahora es un arreglo real
+
+  private _searchTerm: string = '';
+  get searchTerm(): string { return this._searchTerm; }
+  set searchTerm(value: string) {
+    this._searchTerm = value;
+    this.currentPage = 1; 
+    this.updateTable(); // Solo actualiza la tabla cuando escribes
+  }
+  
+  currentPage: number = 1;
+  pageSize: number = 10;
+  pageSizeOptions: number[] = [5, 10, 15, 20];
+
+  // Calcula el total de páginas
+  get totalPages(): number {
+    return Math.ceil(this.filteredProducts.length / this.pageSize) || 1;
+  }
+
+  // Método maestro para actualizar los arreglos sin romper el HTML
+  updateTable() {
+    const term = this.searchTerm.toLowerCase().trim();
+    if (!term) {
+      this.filteredProducts = [...this.products];
+    } else {
+      this.filteredProducts = this.products.filter(p => 
+        p.name.toLowerCase().includes(term) ||
+        (p.categoryName && p.categoryName.toLowerCase().includes(term)) ||
+        (p.description && p.description.toLowerCase().includes(term))
+      );
+    }
+    
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    this.paginatedProducts = this.filteredProducts.slice(startIndex, startIndex + this.pageSize);
+  }
+
+  // Métodos para los botones de paginación
+  nextPage() {
+    if (this.currentPage < this.totalPages) {
+      this.currentPage++;
+      this.updateTable(); 
+    }
+  }
+
+  prevPage() {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.updateTable(); 
+    }
+  }
+
+  onPageSizeChange(newSize: any) {
+    this.pageSize = Number(newSize);
+    this.currentPage = 1;
+    this.updateTable();
+  }
+
   showProductModal = false;
   editingProduct: Product | null = null;
   productForm = {
@@ -63,13 +108,13 @@ previewHoy = new Date().toLocaleDateString('es-PE', {
   };
   productError = '';
 
-  // Unsplash
+  // ─── UNSPLASH ───
   unsplashQuery = '';
   unsplashResults: UnsplashPhoto[] = [];
   unsplashLoading = false;
   unsplashSearched = false;
 
-  // Entradas del día
+  // ─── ENTRADAS DEL DÍA ───
   entradas: DailyEntrada[] = [];
   newEntradaName = '';
   entradaError = '';
@@ -77,11 +122,16 @@ previewHoy = new Date().toLocaleDateString('es-PE', {
   editingEntrada: DailyEntrada | null = null;
   editEntradaName = '';
 
-  // ─── NUEVO: VARIABLES MENÚ QR ───
+  // ─── MENÚ QR ───
   menuQrItems: MenuDelDiaItem[] = [];
   menuQrLoading = false;
   qrCategories = ['Entradas', 'Platos de fondo', 'Postres', 'Bebidas', 'Duos'];
   qrTags = ['', 'Vegetariano', 'Mariscos', 'Chef recomienda'];
+
+  showQrItemModal = false;
+  qrItemModalCat = '';
+  editingQrItem: MenuDelDiaItem | null = null;
+  qrItemForm = { nombre: '', descripcion: '', precio: 0, tag: '', esDestacado: false };
 
   // UI
   loading = false;
@@ -93,10 +143,14 @@ previewHoy = new Date().toLocaleDateString('es-PE', {
     this.loadCategories();
     this.loadProducts();
     this.loadEntradas();
-    this.loadMenuQr(); // Cargamos el menú QR al inicio
+    this.loadMenuQr(); 
   }
 
-  // ─── CATEGORÍAS ──────────────────────────────────────────────
+  ngAfterViewInit() {
+    setTimeout(() => this.generateQr(), 100);
+  }
+
+  // ─── LÓGICA CATEGORÍAS ───
   loadCategories() {
     this.http.get<Category[]>(`${this.apiUrl}/category`).subscribe({
       next: (data) => this.categories = data,
@@ -147,10 +201,13 @@ previewHoy = new Date().toLocaleDateString('es-PE', {
     });
   }
 
-  // ─── PRODUCTOS ────────────────────────────────────────────────
+  // ─── LÓGICA PRODUCTOS ───
   loadProducts() {
     this.http.get<Product[]>(`${this.apiUrl}/product`).subscribe({
-      next: (data) => this.products = data,
+      next: (data) => {
+        this.products = data;
+        this.updateTable(); // Inicia la paginación con los datos reales
+      },
       error: (e) => console.error(e)
     });
   }
@@ -197,20 +254,76 @@ previewHoy = new Date().toLocaleDateString('es-PE', {
     });
   }
 
-  // ─── UNSPLASH ─────────────────────────────────────────────────
+  // ─── LÓGICA UNSPLASH ───
   searchUnsplash() {
     if (!this.unsplashQuery.trim()) return;
+    
     this.unsplashLoading = true;
     this.unsplashSearched = true;
+    this.unsplashResults = []; // Limpiamos resultados previos
+    
     const headers = new HttpHeaders({ Authorization: `Client-ID ${this.unsplashKey}` });
+    
+    // Agregamos un término general en inglés para asegurar que siempre haya resultados
+    const query = this.traducirPlato(this.unsplashQuery) + " food dish";
+    
     this.http.get<any>(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(this.unsplashQuery + ' comida plato')}&per_page=9&orientation=landscape`,
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=9&orientation=landscape`,
       { headers }
     ).subscribe({
-      next: (res) => { this.unsplashResults = res.results; this.unsplashLoading = false; },
-      error: () => { this.unsplashLoading = false; }
+      next: (res) => { 
+        this.unsplashResults = res.results; 
+        this.unsplashLoading = false; 
+      },
+      error: (err) => { 
+        console.error('Error en Unsplash:', err);
+        this.unsplashLoading = false;
+        // Si el error es 403, significa que agotaste tus 50 peticiones gratuitas diarias
+        if (err.status === 403) {
+          alert("Has alcanzado el límite de búsquedas gratuitas de Unsplash por hoy.");
+        }
+      }
     });
   }
+
+  private traducirPlato(query: string): string {
+  const dict: Record<string, string> = {
+    'tallarines': 'noodles pasta',
+    'arroz': 'rice',
+    'pollo': 'chicken',
+    'ceviche': 'ceviche peruvian',
+    'lomo': 'beef steak',
+    'causa': 'causa peruvian potato',
+    'ají de gallina': 'peruvian chicken stew',
+    'anticuchos': 'beef skewers',
+    'chicharrón': 'fried pork',
+    'seco': 'braised meat stew',
+    'estofado': 'beef stew',
+    'sudado': 'fish stew',
+    'tacu tacu': 'peruvian beans rice',
+    'mazamorra': 'peruvian pudding',
+    'picarones': 'peruvian donuts',
+    'suspiro': 'peruvian dessert cream',
+    'chicha': 'peruvian drink',
+    'emoliente': 'herbal drink',
+    'papa': 'potato',
+    'yuca': 'cassava',
+    'chancho': 'pork',
+    'pato': 'duck',
+    'trucha': 'trout',
+    'camarones': 'shrimp',
+    'mariscos': 'seafood',
+    'pulpo': 'octopus',
+  };
+
+  let traducido = query.toLowerCase().trim();
+  for (const [es, en] of Object.entries(dict)) {
+    if (traducido.includes(es)) {
+      traducido = traducido.replace(es, en);
+    }
+  }
+  return traducido;
+}
 
   selectPhoto(photo: UnsplashPhoto) {
     this.productForm.imageUrl = photo.urls.regular;
@@ -222,7 +335,7 @@ previewHoy = new Date().toLocaleDateString('es-PE', {
     return this.categories.find(c => c.id === id)?.name || '';
   }
 
-  // ─── ENTRADAS DEL DÍA ─────────────────────────────────────────
+  // ─── LÓGICA ENTRADAS DEL DÍA ───
   loadEntradas() {
     this.http.get<DailyEntrada[]>(`${this.apiUrl}/entrada`).subscribe({
       next: (data) => this.entradas = data,
@@ -283,7 +396,7 @@ previewHoy = new Date().toLocaleDateString('es-PE', {
     });
   }
 
-  // ─── NUEVO: GESTIÓN DE MENÚ QR ────────────────────────────────
+  // ─── LÓGICA MENÚ QR ───
   loadMenuQr() {
     this.http.get<MenuDelDiaItem[]>(`${this.apiUrl}/MenuDelDia`).subscribe({
       next: (data) => this.menuQrItems = data,
@@ -314,7 +427,6 @@ previewHoy = new Date().toLocaleDateString('es-PE', {
   saveMenuQr() {
     this.menuQrLoading = true;
     
-    // Recalcular orden para garantizar limpieza
     let ordenGlobal = 1;
     this.qrCategories.forEach(cat => {
       this.getMenuQrItems(cat).forEach(item => {
@@ -336,56 +448,94 @@ previewHoy = new Date().toLocaleDateString('es-PE', {
     });
   }
 
-generateQr() {
-  if (!this.qrCanvas?.nativeElement) return;
-  QRCode.toCanvas(this.qrCanvas.nativeElement, this.menuPublicoUrl, {
-    width: 200,
-    margin: 2,
-    color: { dark: '#1A1610', light: '#F7F2EA' }
-  }, (err) => {
-    if (err) console.error('Error generando QR:', err);
-  });
-}
- 
-/** Permite actualizar la preview en tiempo real cuando el usuario edita */
-refreshPreview() {
-  // Angular detecta el cambio automáticamente con ngModel,
-  // este método existe para engancharlo con (ngModelChange) si necesitas lógica adicional
-}
- 
-/** Descarga el QR como imagen PNG */
-downloadQr() {
-  QRCode.toDataURL(this.menuPublicoUrl, {
-    width: 400,
-    margin: 2,
-    color: { dark: '#1A1610', light: '#F7F2EA' }
-  }).then((url) => {
-    const link = document.createElement('a');
-    link.download = 'menu-qr-la-terraza.png';
-    link.href = url;
-    link.click();
-  }).catch(err => console.error('Error generando QR:', err));
-}
- 
-// 4. MODIFICA ngAfterViewInit para generar el QR al cargar
-//    Si tu componente no tiene ngAfterViewInit, agrégalo y añade AfterViewInit en implements:
- 
-ngAfterViewInit() {
-  // Espera un tick para que Angular renderice el canvas
-  setTimeout(() => this.generateQr(), 100);
-}
- 
-// 5. TAMBIÉN genera el QR cuando el usuario hace click en el tab menuQr.
-//    Modifica la línea del tab en el HTML así:
-//    (click)="activeTab = 'menuQr'; setTimeout(generateQr.bind(this), 50)"
-//    O más limpio, crea este método y úsalo:
-switchToQrTab() {
-  this.activeTab = 'menuQr';
-  setTimeout(() => this.generateQr(), 80);
-}
- 
-// 6. En el HTML, cambia el botón del tab QR de:
-//    (click)="activeTab = 'menuQr'"
-// A:
-//    (click)="switchToQrTab()"
+  generateQr() {
+    if (!this.qrCanvas?.nativeElement) return;
+    QRCode.toCanvas(this.qrCanvas.nativeElement, this.menuPublicoUrl, {
+      width: 200,
+      margin: 2,
+      color: { dark: '#1A1610', light: '#F7F2EA' }
+    }, (err) => {
+      if (err) console.error('Error generando QR:', err);
+    });
+  }
+  
+  refreshPreview() {}
+  
+  downloadQr() {
+    QRCode.toDataURL(this.menuPublicoUrl, {
+      width: 400,
+      margin: 2,
+      color: { dark: '#1A1610', light: '#F7F2EA' }
+    }).then((url) => {
+      const link = document.createElement('a');
+      link.download = 'menu-qr-la-terraza.png';
+      link.href = url;
+      link.click();
+    }).catch(err => console.error('Error generando QR:', err));
+  }
+
+  switchToQrTab() {
+    this.activeTab = 'menuQr';
+    setTimeout(() => this.generateQr(), 80);
+  }
+
+  // ─── LÓGICA MODAL PLATO QR ───
+  getCatIcon(cat: string): string {
+    const icons: Record<string, string> = {
+      'Entradas': '🥗',
+      'Platos de fondo': '🍽️',
+      'Postres': '🍮',
+      'Bebidas': '🥤',
+      'Duos': '🤝'
+    };
+    return icons[cat] || '🍴';
+  }
+
+  openQrItemModal(cat: string, item?: MenuDelDiaItem) {
+    this.qrItemModalCat = cat;
+    if (item) {
+      this.editingQrItem = item;
+      this.qrItemForm = {
+        nombre: item.nombre,
+        descripcion: item.descripcion,
+        precio: item.precio,
+        tag: item.tag,
+        esDestacado: item.esDestacado
+      };
+    } else {
+      this.editingQrItem = null;
+      this.qrItemForm = { nombre: '', descripcion: '', precio: 0, tag: '', esDestacado: false };
+    }
+    this.showQrItemModal = true;
+  }
+
+  closeQrItemModal() {
+    this.showQrItemModal = false;
+    this.editingQrItem = null;
+  }
+
+  saveQrItem() {
+    if (!this.qrItemForm.nombre.trim()) return;
+
+    if (this.editingQrItem) {
+      this.editingQrItem.nombre = this.qrItemForm.nombre;
+      this.editingQrItem.descripcion = this.qrItemForm.descripcion;
+      this.editingQrItem.precio = this.qrItemForm.precio;
+      this.editingQrItem.tag = this.qrItemForm.tag;
+      this.editingQrItem.esDestacado = this.qrItemForm.esDestacado;
+    } else {
+      this.menuQrItems.push({
+        categoria: this.qrItemModalCat,
+        nombre: this.qrItemForm.nombre,
+        descripcion: this.qrItemForm.descripcion,
+        precio: this.qrItemForm.precio,
+        tag: this.qrItemForm.tag,
+        esDestacado: this.qrItemForm.esDestacado,
+        orden: this.getMenuQrItems(this.qrItemModalCat).length + 1
+      });
+    }
+
+    this.refreshPreview();
+    this.closeQrItemModal();
+  }
 }
