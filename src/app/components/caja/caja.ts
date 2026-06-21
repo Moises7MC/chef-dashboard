@@ -15,6 +15,7 @@ interface OrdenLista {
   createdAt: string;
   comanda: string;
   items: { productName: string; quantity: number; unitPrice: number }[];
+  entradasAdicionales?: string | null; // ✅ NUEVO
 }
 
 interface Transaction {
@@ -98,6 +99,10 @@ export class CajaComponent implements OnInit, OnDestroy {
   loading = false;
   procesando = false;
 
+  preciosEntradaAdicional: { [nombre: string]: number } = {};
+  entradasAdicionalesParsed: string[] = [];
+  totalEntradaAdicional = 0;
+
   // ✅ CORREGIDO: Toma la fecha local de tu computadora en lugar de la fecha universal UTC
   selectedDate: string = (() => {
     const now = new Date();
@@ -168,30 +173,58 @@ export class CajaComponent implements OnInit, OnDestroy {
 
   // ── Cobrar orden ─────────────────────────────────────────
   openCobrarModal(order: OrdenLista) {
-    this.selectedOrder = order;
-    this.selectedPaymentMethod = 'Efectivo';
-    this.showCobrarModal = true;
+  this.selectedOrder = order;
+  this.selectedPaymentMethod = 'Efectivo';
+  this.preciosEntradaAdicional = {};
+  this.totalEntradaAdicional = 0;
+
+  // Parsear entradas adicionales del JSON
+  try {
+    this.entradasAdicionalesParsed = order.entradasAdicionales
+      ? JSON.parse(order.entradasAdicionales)
+      : [];
+  } catch {
+    this.entradasAdicionalesParsed = [];
   }
 
+  // Inicializar precio en 0 para cada entrada adicional
+  this.entradasAdicionalesParsed.forEach(nombre => {
+    this.preciosEntradaAdicional[nombre] = 0;
+  });
+
+  this.showCobrarModal = true;
+}
+
   cobrarOrden() {
-    if (!this.selectedOrder) return;
-    this.procesando = true;
-    this.http.post(`${this.apiUrl}/transaction/cobrar`, {
-      orderId: this.selectedOrder.id,
-      paymentMethod: this.selectedPaymentMethod
-    }).subscribe({
-      next: () => {
-        this.showCobrarModal = false;
-        this.selectedOrder = null;
-        this.procesando = false;
-        this.loadAll();
-      },
-      error: (e) => {
-        alert(e.error || 'Error al cobrar');
-        this.procesando = false;
-      }
-    });
-  }
+  if (!this.selectedOrder) return;
+  this.procesando = true;
+
+  // Calcular total adicional por entradas cobradas
+  const totalAdicional = Object.values(this.preciosEntradaAdicional)
+    .reduce((sum, precio) => sum + (precio || 0), 0);
+
+  const totalFinal = this.selectedOrder.total + totalAdicional;
+
+  this.http.post(`${this.apiUrl}/transaction/cobrar`, {
+    orderId: this.selectedOrder.id,
+    paymentMethod: this.selectedPaymentMethod,
+    totalOverride: totalFinal > this.selectedOrder.total ? totalFinal : null
+  }).subscribe({
+    next: () => {
+      this.showCobrarModal = false;
+      this.selectedOrder = null;
+      this.procesando = false;
+      this.preciosEntradaAdicional = {};
+      this.entradasAdicionalesParsed = [];
+      this.totalEntradaAdicional = 0;
+      this.loadAll();
+    },
+    error: (e) => {
+      alert(e.error || 'Error al cobrar');
+      this.procesando = false;
+    }
+  });
+}
 
   // ── Gasto manual ─────────────────────────────────────────
   openGastoModal() {
@@ -290,4 +323,14 @@ export class CajaComponent implements OnInit, OnDestroy {
     const url = `${this.apiUrl}/transaction/export/pdf?date=${this.selectedDate}`;
     window.open(url, '_blank');
   }
+
+  // ✅ NUEVO: Calcula el total de entradas adicionales en tiempo real
+calcularTotalAdicional(): number {
+  return Object.values(this.preciosEntradaAdicional)
+    .reduce((sum, precio) => sum + (precio || 0), 0);
+}
+
+calcularTotalFinal(): number {
+  return (this.selectedOrder?.total || 0) + this.calcularTotalAdicional();
+}
 }

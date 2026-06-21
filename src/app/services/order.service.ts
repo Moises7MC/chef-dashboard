@@ -61,6 +61,7 @@ export interface Order {
   entradas?: string;
   isParaLlevar?: boolean;
   entradasServidas?: string[];
+  entradasAdicionales?: string | null;
 }
 
 export interface OrderItem {

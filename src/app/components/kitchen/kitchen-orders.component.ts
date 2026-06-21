@@ -199,7 +199,7 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     // Convertimos a milisegundos ignorando la zona horaria del navegador
     // Usamos el valor UTC para que sea consistente con C#
     const createdDate = new Date(createdAt).getTime();
-    
+
     // Si la orden ya terminó, usamos la fecha de actualización
     const end = (status === 'Listo' || status === 'Cancelado' || status === "Cobrado") && updatedAt
       ? new Date(updatedAt).getTime()
@@ -212,7 +212,7 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     // es casi seguro un error de zona horaria (UTC vs Local).
     // Si la diferencia es negativa o absurda, forzamos a 0.
     if (diff < 0) return 0;
-    
+
     return diff;
   }
 
@@ -354,13 +354,13 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
       .filter((x: string) => x && !x.toLowerCase().includes('ronda'));
   }
   // ✅ NUEVA LÓGICA: Combina el string de entradas con el JSON de servidas para obtener la fracción
- // ✅ LÓGICA CORREGIDA: Ahora soporta saltos de línea (\n) y múltiples formatos
+  // ✅ LÓGICA CORREGIDA: Ahora soporta saltos de línea (\n) y múltiples formatos
   getEntradasStatus(order: any): { name: string, total: number, servidas: number }[] {
     if (!order.entradas) return [];
-    
+
     const trimmed = order.entradas.trim();
     let itemsRaw: string[] = [];
-    
+
     // 1. Intentar parsear como JSON o dividir por comas, punto y coma, o saltos de línea (\n)
     if (trimmed.startsWith('[')) {
       try {
@@ -371,31 +371,31 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     } else {
       itemsRaw = trimmed.split(/[,;\n]+/);
     }
-    
+
     // Limpiar espacios vacíos
     itemsRaw = itemsRaw.map((e: string) => e.trim()).filter((e: string) => {
       return e.length > 0 && e !== '🔸 NUEVO:';
     });
-    
+
     // 2. Obtener las ya servidas desde el backend
     let servidasArray: string[] = [];
     if (order.entradasServidas) {
       try {
-        servidasArray = typeof order.entradasServidas === 'string' 
-          ? JSON.parse(order.entradasServidas) 
+        servidasArray = typeof order.entradasServidas === 'string'
+          ? JSON.parse(order.entradasServidas)
           : order.entradasServidas;
       } catch { }
     }
-    
+
     // Normalizar para poder cruzar datos sin importar mayúsculas
     const servidasNorm = servidasArray.map(s => s.toLowerCase().trim());
     const result = [];
-    
+
     // 3. Formatear cada entrada por separado
     for (const raw of itemsRaw) {
       let total = 1;
       let name = raw;
-      
+
       // Buscar formato "2x ensalada rusa" o "2 x ensalada rusa"
       const matchPre = raw.match(/^\s*(\d+)\s*x\s+(.+)$/i);
       if (matchPre) {
@@ -409,10 +409,10 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
           name = matchSuf[1].trim();
         }
       }
-      
+
       const nameNorm = name.toLowerCase().trim();
       let servidasCount = 0;
-      
+
       // Contar cuántas unidades de ESTE plato específico ya salieron
       for (let i = 0; i < total; i++) {
         const idx = servidasNorm.indexOf(nameNorm);
@@ -421,24 +421,24 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
           servidasNorm.splice(idx, 1); // Lo quitamos para no contarlo doble
         }
       }
-      
+
       result.push({
         name: name,
         total: total,
         servidas: servidasCount
       });
     }
-    
+
     return result;
   }
 
   // ✅ NUEVA LÓGICA: Construye las rondas exactas leyendo el historial de la BD
   getValidRounds(order: any): any[] | null {
     if (!order.history) return null;
-    
+
     // Filtramos las acciones que agregaron platos
     const addActions = order.history.filter((h: any) => h.action === 'Inicial' || h.action === 'Agregado');
-    
+
     // Si solo hay 1 envío, no mostramos "Rondas", mostramos la lista plana normal
     if (addActions.length <= 1) return null;
 
@@ -448,7 +448,7 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     for (let i = 0; i < addActions.length; i++) {
       const h = addActions[i];
       let itemsInRound: any[] = [];
-      
+
       if (h.itemsAdded) {
         try {
           const parsed = JSON.parse(h.itemsAdded);
@@ -460,23 +460,23 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
               servedQuantity: realItem?.servedQuantity || 0
             };
           });
-        } catch (e) {}
+        } catch (e) { }
       }
-      
+
       // Rescatar modificaciones (editados/eliminados) que pertenezcan a esta ronda
-      const changes = order.history.filter((ch: any) => 
-          (ch.action === 'Modificado' || ch.action === 'Cancelado') && 
-          ch.roundNumber === roundNum
+      const changes = order.history.filter((ch: any) =>
+        (ch.action === 'Modificado' || ch.action === 'Cancelado') &&
+        ch.roundNumber === roundNum
       ).map((ch: any) => {
-          try {
-              const parsed = JSON.parse(ch.itemsAdded)[0];
-              return {
-                  action: ch.action,
-                  productName: parsed.productName || parsed.product?.name,
-                  oldQuantity: parsed.oldQuantity,
-                  newQuantity: parsed.quantity
-              };
-          } catch(e) { return null; }
+        try {
+          const parsed = JSON.parse(ch.itemsAdded)[0];
+          return {
+            action: ch.action,
+            productName: parsed.productName || parsed.product?.name,
+            oldQuantity: parsed.oldQuantity,
+            newQuantity: parsed.quantity
+          };
+        } catch (e) { return null; }
       }).filter((ch: any) => ch !== null);
 
       rounds.push({
@@ -486,9 +486,20 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
         items: itemsInRound,
         changes: changes
       });
-      
+
       roundNum++;
     }
     return rounds;
+  }
+
+  // ✅ NUEVO: Parsea el JSON de entradas adicionales
+  parseEntradasAdicionales(entradasAdicionales: string | null): string[] {
+    if (!entradasAdicionales) return [];
+    try {
+      const parsed = JSON.parse(entradasAdicionales);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   }
 }
