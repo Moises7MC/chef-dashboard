@@ -212,27 +212,48 @@
   </div>
 
   <!-- MODAL COBRAR -->
-  <div class="vd-modal-overlay" *ngIf="showCobrarModal">
-    <div class="vd-modal">
-      <div class="vd-modal-success-icon">✓</div>
-      <h2>Pedido enviado a cocina</h2>
-      <p class="vd-modal-sub">Selecciona el método de pago</p>
-      <div class="vd-payment-grid">
-        <button *ngFor="let m of paymentMethods" class="vd-payment-btn"
-          [class.selected]="selectedPaymentMethod === m"
-          (click)="selectedPaymentMethod = m">
-          <span class="vd-payment-icon">{{ getPaymentIcon(m) }}</span>
-          <span>{{ m }}</span>
-        </button>
-      </div>
-      <div class="vd-modal-total">
-        <span>Total a cobrar</span>
-        <span>S/. {{ total.toFixed(2) }}</span>
-      </div>
-      <button class="vd-btn-cobrar" (click)="cobrarOrden()" [disabled]="procesando">
-        {{ procesando ? 'Procesando...' : '💵 Cobrar S/. ' + total.toFixed(2) }}
+<!-- MODAL COBRAR -->
+<div class="vd-modal-overlay" *ngIf="showCobrarModal">
+  <div class="vd-modal">
+    <div class="vd-modal-success-icon">✓</div>
+    <h2>Pedido enviado a cocina</h2>
+    <p class="vd-modal-sub">Selecciona el método de pago</p>
+    <div class="vd-payment-grid">
+      <button *ngFor="let m of paymentMethods" class="vd-payment-btn"
+        [class.selected]="selectedPaymentMethod === m"
+        (click)="selectedPaymentMethod = m">
+        <span class="vd-payment-icon">{{ getPaymentIcon(m) }}</span>
+        <span>{{ m }}</span>
       </button>
     </div>
+
+    <!-- ✅ NUEVO: Cobro por taper (siempre, porque todo es para llevar) -->
+    <div style="margin-top: 4px; padding: 12px 14px; background: #ede9fe;
+                border: 1px solid #c4b5fd; border-radius: 10px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 13px; color: #5b21b6;">
+          🥡 Taper ({{ cantidadTapers }} × S/. {{ precioTaper.toFixed(2) }})
+        </span>
+        <span style="font-weight: 600; color: #5b21b6;">
+          + S/. {{ totalTaper.toFixed(2) }}
+        </span>
+      </div>
+    </div>
+
+    <div class="vd-modal-total">
+      <span>Subtotal productos</span>
+      <span>S/. {{ total.toFixed(2) }}</span>
+    </div>
+
+    <div class="vd-modal-total" style="background: #f0fdf4; border: 1px solid #86efac;">
+      <span style="font-weight: 700;">Total a cobrar</span>
+      <span style="font-weight: 700; color: #15803d;">S/. {{ totalConTaper.toFixed(2) }}</span>
+    </div>
+
+    <button class="vd-btn-cobrar" (click)="cobrarOrden()" [disabled]="procesando">
+      {{ procesando ? 'Procesando...' : '💵 Cobrar S/. ' + totalConTaper.toFixed(2) }}
+    </button>
   </div>
+</div>
 
 </div>

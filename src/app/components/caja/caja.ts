@@ -15,7 +15,8 @@ interface OrdenLista {
   createdAt: string;
   comanda: string;
   items: { productName: string; quantity: number; unitPrice: number }[];
-  entradasAdicionales?: string | null; // ✅ NUEVO
+  entradasAdicionales?: string | null;
+  isParaLlevar?: boolean; // ✅ NUEVO
 }
 
 interface Transaction {
@@ -103,6 +104,9 @@ export class CajaComponent implements OnInit, OnDestroy {
   entradasAdicionalesParsed: string[] = [];
   totalEntradaAdicional = 0;
 
+  cantidadTapers = 0;
+  precioTaper = 1.50;
+
   // ✅ CORREGIDO: Toma la fecha local de tu computadora en lugar de la fecha universal UTC
   selectedDate: string = (() => {
     const now = new Date();
@@ -134,7 +138,7 @@ export class CajaComponent implements OnInit, OnDestroy {
     // Nota: El backend por ahora devuelve el resumen y órdenes listas solo de "hoy". 
     // Si más adelante lo actualizas para buscar resumenes históricos, agregarías la llamada aquí.
   }
-  
+
 
   loadOrdenesListas() {
     this.http.get<OrdenLista[]>(`${this.apiUrl}/transaction/ordenes-listas`).subscribe({
@@ -173,58 +177,62 @@ export class CajaComponent implements OnInit, OnDestroy {
 
   // ── Cobrar orden ─────────────────────────────────────────
   openCobrarModal(order: OrdenLista) {
-  this.selectedOrder = order;
-  this.selectedPaymentMethod = 'Efectivo';
-  this.preciosEntradaAdicional = {};
-  this.totalEntradaAdicional = 0;
+    this.selectedOrder = order;
+    this.selectedPaymentMethod = 'Efectivo';
+    this.preciosEntradaAdicional = {};
+    this.totalEntradaAdicional = 0;
 
-  // Parsear entradas adicionales del JSON
-  try {
-    this.entradasAdicionalesParsed = order.entradasAdicionales
-      ? JSON.parse(order.entradasAdicionales)
-      : [];
-  } catch {
-    this.entradasAdicionalesParsed = [];
+    // Parsear entradas adicionales del JSON
+    try {
+      this.entradasAdicionalesParsed = order.entradasAdicionales
+        ? JSON.parse(order.entradasAdicionales)
+        : [];
+    } catch {
+      this.entradasAdicionalesParsed = [];
+    }
+
+    // Inicializar precio en 0 para cada entrada adicional
+    this.entradasAdicionalesParsed.forEach(nombre => {
+      this.preciosEntradaAdicional[nombre] = 0;
+    });
+
+    // ✅ NUEVO: Si es para llevar, pre-llenar cantidad de tapers según los platos
+    if (order.isParaLlevar || order.tableNumber === 0) {
+      this.cantidadTapers = order.items.reduce((sum, i) => sum + i.quantity, 0);
+    } else {
+      this.cantidadTapers = 0;
+    }
+
+    this.showCobrarModal = true;
   }
 
-  // Inicializar precio en 0 para cada entrada adicional
-  this.entradasAdicionalesParsed.forEach(nombre => {
-    this.preciosEntradaAdicional[nombre] = 0;
-  });
-
-  this.showCobrarModal = true;
-}
-
   cobrarOrden() {
-  if (!this.selectedOrder) return;
-  this.procesando = true;
+    if (!this.selectedOrder) return;
+    this.procesando = true;
 
-  // Calcular total adicional por entradas cobradas
-  const totalAdicional = Object.values(this.preciosEntradaAdicional)
-    .reduce((sum, precio) => sum + (precio || 0), 0);
+    const totalFinal = this.calcularTotalFinal();
 
-  const totalFinal = this.selectedOrder.total + totalAdicional;
-
-  this.http.post(`${this.apiUrl}/transaction/cobrar`, {
-    orderId: this.selectedOrder.id,
-    paymentMethod: this.selectedPaymentMethod,
-    totalOverride: totalFinal > this.selectedOrder.total ? totalFinal : null
-  }).subscribe({
-    next: () => {
-      this.showCobrarModal = false;
-      this.selectedOrder = null;
-      this.procesando = false;
-      this.preciosEntradaAdicional = {};
-      this.entradasAdicionalesParsed = [];
-      this.totalEntradaAdicional = 0;
-      this.loadAll();
-    },
-    error: (e) => {
-      alert(e.error || 'Error al cobrar');
-      this.procesando = false;
-    }
-  });
-}
+    this.http.post(`${this.apiUrl}/transaction/cobrar`, {
+      orderId: this.selectedOrder.id,
+      paymentMethod: this.selectedPaymentMethod,
+      totalOverride: totalFinal > this.selectedOrder.total ? totalFinal : null
+    }).subscribe({
+      next: () => {
+        this.showCobrarModal = false;
+        this.selectedOrder = null;
+        this.procesando = false;
+        this.preciosEntradaAdicional = {};
+        this.entradasAdicionalesParsed = [];
+        this.totalEntradaAdicional = 0;
+        this.cantidadTapers = 0; // ✅ NUEVO
+        this.loadAll();
+      },
+      error: (e) => {
+        alert(e.error || 'Error al cobrar');
+        this.procesando = false;
+      }
+    });
+  }
 
   // ── Gasto manual ─────────────────────────────────────────
   openGastoModal() {
@@ -325,12 +333,31 @@ export class CajaComponent implements OnInit, OnDestroy {
   }
 
   // ✅ NUEVO: Calcula el total de entradas adicionales en tiempo real
-calcularTotalAdicional(): number {
-  return Object.values(this.preciosEntradaAdicional)
-    .reduce((sum, precio) => sum + (precio || 0), 0);
-}
+  calcularTotalAdicional(): number {
+    return Object.values(this.preciosEntradaAdicional)
+      .reduce((sum, precio) => sum + (precio || 0), 0);
+  }
 
-calcularTotalFinal(): number {
-  return (this.selectedOrder?.total || 0) + this.calcularTotalAdicional();
-}
+  calcularTotalTaper(): number {
+    return this.cantidadTapers * this.precioTaper;
+  }
+
+  esParaLlevar(): boolean {
+    return !!(this.selectedOrder?.isParaLlevar || this.selectedOrder?.tableNumber === 0);
+  }
+
+
+  calcularTotalFinal(): number {
+    return (this.selectedOrder?.total || 0)
+      + this.calcularTotalAdicional()
+      + this.calcularTotalTaper();
+  }
+
+  incrementarTaper() {
+    this.cantidadTapers++;
+  }
+
+  decrementarTaper() {
+    if (this.cantidadTapers > 0) this.cantidadTapers--;
+  }
 }

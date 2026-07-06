@@ -306,6 +306,47 @@
         </div>
       </div>
 
+      <!-- ✅ NUEVO: Sección de cobro por taper (solo para llevar) -->
+<div *ngIf="esParaLlevar()"
+  style="margin-top: 16px; padding: 14px; background: #ede9fe; border: 1px solid #c4b5fd; border-radius: 10px;">
+
+  <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 10px;">
+    <span style="font-size: 16px;">🥡</span>
+    <span style="font-weight: 600; font-size: 14px; color: #5b21b6;">
+      Cobro por taper (S/. {{ precioTaper.toFixed(2) }} c/u)
+    </span>
+  </div>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+    <span style="font-size: 14px; color: #4c1d95;">Cantidad de tapers</span>
+
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <button type="button" (click)="decrementarTaper()"
+        style="width: 30px; height: 30px; border-radius: 8px; border: 1px solid #c4b5fd;
+               background: #fff; color: #5b21b6; font-weight: 700; cursor: pointer;">
+        −
+      </button>
+      <span style="min-width: 24px; text-align: center; font-weight: 700; font-size: 15px; color: #4c1d95;">
+        {{ cantidadTapers }}
+      </span>
+      <button type="button" (click)="incrementarTaper()"
+        style="width: 30px; height: 30px; border-radius: 8px; border: 1px solid #c4b5fd;
+               background: #5b21b6; color: #fff; font-weight: 700; cursor: pointer;">
+        +
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="cantidadTapers > 0"
+    style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #c4b5fd;
+           display: flex; justify-content: space-between; align-items: center;">
+    <span style="font-size: 13px; color: #5b21b6;">Subtotal taper</span>
+    <span style="font-weight: 600; color: #5b21b6;">
+      + S/. {{ calcularTotalTaper().toFixed(2) }}
+    </span>
+  </div>
+</div>
+
       <!-- Total final -->
       <div style="margin-top: 14px; padding: 12px 16px;
                   background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px;

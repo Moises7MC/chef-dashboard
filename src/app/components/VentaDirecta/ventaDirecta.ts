@@ -64,6 +64,7 @@ export class VentaDirectaComponent implements OnInit {
     procesando = false;
     ordenCreadaId: number | null = null;
     successMessage = '';
+    precioTaper = 1.50;
 
     constructor(private http: HttpClient) { }
 
@@ -176,6 +177,21 @@ export class VentaDirectaComponent implements OnInit {
         return this.cart.reduce((sum, i) => sum + i.quantity, 0);
     }
 
+    // ✅ NUEVO: Cantidad de tapers = cantidad de platos (segundos) del carrito
+    get cantidadTapers(): number {
+        return this.totalItems;
+    }
+
+    // ✅ NUEVO: Subtotal del cobro por tapers
+    get totalTaper(): number {
+        return this.cantidadTapers * this.precioTaper;
+    }
+
+    // ✅ NUEVO: Total final incluyendo tapers
+    get totalConTaper(): number {
+        return this.total + this.totalTaper;
+    }
+
     clearCart() {
         this.cart = [];
         this.selectedEntradas = []; // ← agregar
@@ -219,12 +235,15 @@ export class VentaDirectaComponent implements OnInit {
         if (!this.ordenCreadaId) return;
         this.procesando = true;
         try {
+            const totalFinal = this.totalConTaper;
+
             await this.http.post(`${this.apiUrl}/transaction/cobrar`, {
                 orderId: this.ordenCreadaId,
-                paymentMethod: this.selectedPaymentMethod
+                paymentMethod: this.selectedPaymentMethod,
+                totalOverride: totalFinal // ✅ NUEVO: incluye el cobro por tapers
             }).toPromise();
 
-            this.successMessage = `✓ Venta registrada · ${this.selectedPaymentMethod} · S/. ${this.total.toFixed(2)}`;
+            this.successMessage = `✓ Venta registrada · ${this.selectedPaymentMethod} · S/. ${totalFinal.toFixed(2)}`;
             this.showCobrarModal = false;
             this.clearCart();
             this.ordenCreadaId = null;
