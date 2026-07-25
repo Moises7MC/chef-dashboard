@@ -13,6 +13,7 @@ export interface OrderHistoryEntry {
   action: string;
   itemsAdded: string;
   roundNumber?: number;
+  waiterName?: string | null;
 }
 
 export interface OrderHistoryItem {
@@ -43,6 +44,7 @@ export interface OrderRound {
   isCancelled: boolean;
   isModified: boolean;
   changes?: RoundChange[];
+  waiterName?: string | null;
 }
 
 export interface Order {
@@ -62,6 +64,11 @@ export interface Order {
   isParaLlevar?: boolean;
   entradasServidas?: string[];
   entradasAdicionales?: string | null;
+  isSeparado?: boolean;
+  tableSuffix?: string | null;
+  lastEditedByWaiter?: string | null;
+  isDeleted?: boolean;
+  deletedAt?: string | null;
 }
 
 export interface OrderItem {
@@ -164,7 +171,8 @@ export class OrderService {
         isLatest: false,
         isCancelled: false,
         isModified: false,
-        changes: []
+        changes: [],
+        waiterName: order.waiterName
       }];
     }
 
@@ -255,7 +263,8 @@ export class OrderService {
         isLatest,
         isCancelled: false,
         isModified: false,
-        changes: changesByRound.get(roundNumber) ?? []
+        changes: changesByRound.get(roundNumber) ?? [],
+        waiterName: entry.waiterName ?? order.waiterName
       };
     });
 
@@ -323,6 +332,13 @@ export class OrderService {
     return new Promise((resolve, reject) => {
       this.http.put<void>(`${API_URL}/api/order/${orderId}/status`, JSON.stringify(status),
         { headers: { 'Content-Type': 'application/json' } })
+        .subscribe({ next: () => resolve(), error: reject });
+    });
+  }
+
+  deleteOrder(orderId: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.http.delete<void>(`${API_URL}/api/order/${orderId}`)
         .subscribe({ next: () => resolve(), error: reject });
     });
   }

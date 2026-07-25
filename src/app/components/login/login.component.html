@@ -64,6 +64,56 @@
         <span *ngIf="loading" class="spinner"></span>
       </button>
 
+      <button type="button" class="link-forgot" (click)="openChangePassword()">
+        Cambiar contraseña
+      </button>
+
     </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: CAMBIAR CONTRASEÑA
+═══════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showChangePassword" (click)="closeChangePassword()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-card-header">
+      <h3>Cambiar contraseña</h3>
+      <button type="button" class="modal-close" (click)="closeChangePassword()">✕</button>
+    </div>
+
+    <p class="modal-hint">Ingresa tu usuario y contraseña actual para definir una nueva.</p>
+
+    <div class="field">
+      <span class="field-label">Usuario</span>
+      <input type="text" class="field-input" [(ngModel)]="cpUsername" name="cpUsername"
+        placeholder="Tu usuario" [disabled]="cpLoading" autocomplete="off" />
+    </div>
+
+    <div class="field">
+      <span class="field-label">Contraseña actual</span>
+      <input type="password" class="field-input" [(ngModel)]="cpCurrentPassword" name="cpCurrentPassword"
+        placeholder="••••••••" [disabled]="cpLoading" autocomplete="off" />
+    </div>
+
+    <div class="field">
+      <span class="field-label">Nueva contraseña</span>
+      <input type="password" class="field-input" [(ngModel)]="cpNewPassword" name="cpNewPassword"
+        placeholder="••••••••" [disabled]="cpLoading" autocomplete="new-password" />
+    </div>
+
+    <div class="field">
+      <span class="field-label">Confirmar nueva contraseña</span>
+      <input type="password" class="field-input" [(ngModel)]="cpNewPasswordConfirm" name="cpNewPasswordConfirm"
+        placeholder="••••••••" [disabled]="cpLoading" autocomplete="new-password" />
+    </div>
+
+    <div class="error-box" *ngIf="cpError">{{ cpError }}</div>
+    <div class="success-box" *ngIf="cpSuccess">{{ cpSuccess }}</div>
+
+    <button type="button" class="btn-submit" [disabled]="cpLoading" (click)="submitChangePassword()">
+      <span *ngIf="!cpLoading">Guardar nueva contraseña</span>
+      <span *ngIf="cpLoading" class="spinner"></span>
+    </button>
   </div>
 </div>

@@ -47,6 +47,10 @@ export const routes: Routes = [
         path: 'venta-directa',
         loadComponent: () => import('./components/VentaDirecta/ventaDirecta').then(m => m.VentaDirectaComponent)
       },
+      {
+        path: 'inventory',
+        loadComponent: () => import('./components/inventory/inventory').then(m => m.InventoryComponent)
+      },
     ]
   },
   { path: '**', redirectTo: '/login' }

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpClientModule, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { SettingsService, TimerSettings } from '../../services/settings.service';
 import QRCode from 'qrcode';
 
 // ─── INTERFACES ───
@@ -31,7 +32,7 @@ export class MenusComponent implements OnInit, AfterViewInit {
   private apiUrl = environment.apiUrl;
   private unsplashKey = 'GZOeZzgY8sguV5Lb_exuWp4_nqvGfLD6T5eSQARgGpU';
 
-  activeTab: 'categories' | 'products' | 'entradas' | 'menuQr' = 'categories';
+  activeTab: 'categories' | 'products' | 'entradas' | 'menuQr' | 'tiempos' = 'categories';
 
   // ─── CATEGORÍAS ───
   categories: Category[] = [];
@@ -137,13 +138,20 @@ export class MenusComponent implements OnInit, AfterViewInit {
   loading = false;
   deleteConfirm: { type: 'category' | 'product'; id: number; name: string } | null = null;
 
-  constructor(private http: HttpClient) {}
+  // ─── TIEMPOS DE ALERTA (Cocina / Cantador) ───
+  timerForm: TimerSettings = { warningMinutes: 8, dangerMinutes: 15 };
+  timerLoading = false;
+  timerSaved = false;
+  timerError = '';
+
+  constructor(private http: HttpClient, private settingsService: SettingsService) {}
 
   ngOnInit() {
     this.loadCategories();
     this.loadProducts();
     this.loadEntradas();
-    this.loadMenuQr(); 
+    this.loadMenuQr();
+    this.loadTimerSettings();
   }
 
   ngAfterViewInit() {
@@ -393,6 +401,40 @@ export class MenusComponent implements OnInit, AfterViewInit {
   getTodayLabel(): string {
     return new Date().toLocaleDateString('es-PE', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+  }
+
+  // ─── LÓGICA TIEMPOS DE ALERTA ───
+  // Estos minutos definen cuándo un pedido pasa a "naranja" (advertencia) y
+  // "rojo" (urgente) tanto en Cocina (esta web) como en el Cantador (app).
+  loadTimerSettings() {
+    this.settingsService.timers$.subscribe(timers => {
+      this.timerForm = { ...timers };
+    });
+  }
+
+  saveTimerSettings() {
+    this.timerError = '';
+    if (this.timerForm.warningMinutes <= 0 || this.timerForm.dangerMinutes <= 0) {
+      this.timerError = 'Los minutos deben ser mayores a 0';
+      return;
+    }
+    if (this.timerForm.dangerMinutes <= this.timerForm.warningMinutes) {
+      this.timerError = 'El tiempo urgente debe ser mayor al tiempo de advertencia';
+      return;
+    }
+    this.timerLoading = true;
+    this.settingsService.updateTimers(this.timerForm).subscribe({
+      next: () => {
+        this.settingsService.loadTimers();
+        this.timerLoading = false;
+        this.timerSaved = true;
+        setTimeout(() => this.timerSaved = false, 2500);
+      },
+      error: (e) => {
+        this.timerError = e.error || 'Error al guardar';
+        this.timerLoading = false;
+      }
     });
   }
 

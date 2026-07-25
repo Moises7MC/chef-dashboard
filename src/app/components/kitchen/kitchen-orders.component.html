@@ -33,15 +33,115 @@
     </div>
   </div>
 
-  <!-- GRID DE PEDIDOS -->
-  <div class="grid">
-    <div *ngFor="let group of filteredOrders" class="card" [class.card-multi-round]="group.orders.length > 1"
+  <!-- ═══════════════════════════════════════════════
+       PEDIDOS ACTIVOS (Nuevo / Preparando / Demorado / Listo)
+       Misma fila compacta que "Resueltos" — el detalle se ve
+       en un modal al hacer clic, nunca desplegado en línea.
+  ═══════════════════════════════════════════════ -->
+  <div class="order-section" *ngIf="activeGroups.length > 0">
+    <div class="order-section-header">
+      <span class="order-section-title">🔥 Activos</span>
+      <span class="order-section-count">{{ activeGroups.length }}</span>
+    </div>
+    <div class="order-list">
+      <ng-container *ngFor="let group of activeGroups; trackBy: trackByGroup">
+        <ng-container *ngTemplateOutlet="orderRow; context: { group: group }"></ng-container>
+      </ng-container>
+    </div>
+  </div>
+
+  <div *ngIf="activeGroups.length === 0" class="empty">
+    {{ finishedGroups.length > 0 ? '✅ No hay pedidos activos en este momento' : 'Sin pedidos para mostrar' }}
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       SECCIÓN DE PEDIDOS RESUELTOS (COBRADO / CANCELADO)
+       Lista compacta y colapsable — evita el scroll infinito
+       cuando hay muchos pedidos ya cerrados en el día.
+  ═══════════════════════════════════════════════ -->
+  <div class="order-section" *ngIf="finishedGroups.length > 0">
+    <div class="order-section-header order-section-header-clickable" (click)="finishedCollapsed = !finishedCollapsed">
+      <span class="order-section-title">✅ Resueltos</span>
+      <span class="order-section-count">{{ finishedGroups.length }}</span>
+      <svg class="order-section-chevron" [class.open]="!finishedCollapsed" width="16" height="16" viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+    </div>
+
+    <div class="order-list" *ngIf="!finishedCollapsed">
+      <ng-container *ngFor="let group of finishedGroups; trackBy: trackByGroup">
+        <ng-container *ngTemplateOutlet="orderRow; context: { group: group }"></ng-container>
+      </ng-container>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     PLANTILLA: FILA COMPACTA DE UN PEDIDO
+     Se usa igual para activos y resueltos — clic abre el modal.
+═══════════════════════════════════════════════ -->
+<ng-template #orderRow let-group="group">
+  <div class="order-row" (click)="openDetail(group)"
+    [class.order-row-cancelled]="group.status === 'Cancelado'"
+    [class.order-row-deleted]="groupAllDeleted(group)">
+    <span class="order-row-table">
+      {{ group.tableNumber === 0 ? 'Para llevar' : 'Mesa ' + group.tableNumber + (group.tableSuffix || '') }}
+    </span>
+
+    <span *ngIf="groupAllDeleted(group); else normalBadge" class="badge order-row-badge badge-deleted">Eliminado</span>
+    <ng-template #normalBadge>
+      <span class="badge order-row-badge" [ngClass]="getBadgeClass(group.status, group.tableNumber, hasParaLlevar(group))">
+        {{ (group.tableNumber === 0 || hasParaLlevar(group)) ? 'Para llevar' : getStatusLabel(group.status) }}
+      </span>
+    </ng-template>
+    <span *ngIf="!groupAllDeleted(group) && groupHasDeleted(group)" class="badge order-row-badge badge-deleted">
+      con eliminados
+    </span>
+
+    <span *ngIf="group.orders.length > 1" class="badge-multiple-orders">{{ group.orders.length }} pedidos</span>
+
+    <span class="order-row-waiter" *ngIf="group.waiterName">{{ group.waiterName }}</span>
+
+    <!-- Cronómetro para pedidos activos, hora fija para resueltos -->
+    <span class="order-row-timer" *ngIf="!isFinished(group)"
+      [ngClass]="getTimerClass(group.createdAt, group.status, group.updatedAt, hasParaLlevar(group))">
+      {{ formatElapsed(group.createdAt, group.status, group.updatedAt) }}
+    </span>
+    <span class="order-row-time" *ngIf="isFinished(group)">{{ formatTime(group.createdAt) }}</span>
+
+    <span class="order-row-amount">S/. {{ groupTotal(group).toFixed(2) }}</span>
+
+    <svg class="order-row-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2">
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  </div>
+</ng-template>
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: DETALLE COMPLETO DE UN PEDIDO
+═══════════════════════════════════════════════ -->
+<div class="order-modal-overlay" *ngIf="selectedGroup" (click)="closeDetail()">
+  <div class="order-modal-box" (click)="$event.stopPropagation()">
+    <button class="order-modal-close" (click)="closeDetail()">✕</button>
+    <ng-container *ngTemplateOutlet="fullCard; context: { group: selectedGroup }"></ng-container>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     PLANTILLA REUTILIZABLE: TARJETA COMPLETA DE PEDIDO
+     (usada dentro del modal de detalle)
+═══════════════════════════════════════════════ -->
+<ng-template #fullCard let-group="group">
+    <div class="card" [class.card-multi-round]="group.orders.length > 1"
       [ngClass]="getCardTimeClass(group.createdAt, group.status, group.updatedAt, group.tableNumber, hasParaLlevar(group))">
 
       <!-- ENCABEZADO DE TARJETA -->
       <div class="card-header">
         <span class="card-id">
-          {{ group.tableNumber === 0 ? 'Para llevar' : 'Mesa ' + group.tableNumber }}
+          {{ group.tableNumber === 0 ? 'Para llevar' : 'Mesa ' + group.tableNumber + (group.tableSuffix || '') }}
         </span>
         <div class="card-badges">
           <span class="badge" [ngClass]="getBadgeClass(group.status, group.tableNumber, hasParaLlevar(group))"
@@ -105,7 +205,12 @@
 
       <!-- CONTENEDOR CON SCROLL PARA MÚLTIPLES ÓRDENES -->
       <div class="orders-scroll-container" [class.has-multiple]="group.orders.length > 1">
-        <div *ngFor="let order of group.orders" class="single-order-block">
+        <div *ngFor="let order of group.orders" class="single-order-block" [class.order-block-deleted]="order.isDeleted">
+
+          <!-- Aviso de pedido eliminado (borrado lógico, queda visible para auditoría) -->
+          <div *ngIf="order.isDeleted" class="deleted-order-banner">
+            🗑 Eliminado {{ order.deletedAt ? ('— ' + formatTime(order.deletedAt) + ' ' + formatDate(order.deletedAt)) : '' }}
+          </div>
 
           <!-- Etiqueta de Tipo de Orden (Solo si hay múltiples) -->
           <div *ngIf="group.orders.length > 1" class="order-type-label">
@@ -129,6 +234,9 @@
                   <span class="item-name" [class.item-name-served]="entrada.servidas >= entrada.total">
                     {{ entrada.name }}
                   </span>
+
+                  <span *ngIf="entradaIsNew(entrada.name) && entradaWaiterLabel(order) as mozo"
+                    class="item-mozo-badge">👤 {{ mozo }}</span>
 
                   <span *ngIf="entrada.servidas > 0 && entrada.servidas < entrada.total" class="item-partial-badge">
                     {{ entrada.servidas }}/{{ entrada.total }} servidos
@@ -181,15 +289,25 @@
               <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
             </svg>
             S/. {{ order.total.toFixed(2) }}
+            <button *ngIf="!order.isDeleted" type="button" class="btn-delete-order" title="Eliminar este pedido"
+              (click)="deleteOrder(order)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                <path d="M10 11v6" />
+                <path d="M14 11v6" />
+                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+              </svg>
+            </button>
           </div>
 
           <!-- SECCIÓN DE SEGUNDOS / RONDAS -->
           <div class="rounds-section">
 
-            <ng-container *ngIf="getValidRounds(order) as rounds; else noRounds">
+            <ng-container *ngIf="order.rounds && order.rounds.length > 1; else noRounds">
               <div class="section-label">Segundos</div>
 
-              <div *ngFor="let round of rounds" class="round-block" [class.round-old]="!round.isLatest"
+              <div *ngFor="let round of order.rounds" class="round-block" [class.round-old]="!round.isLatest"
                 [class.round-new]="round.isLatest"
                 [class.round-has-changes]="round.changes && round.changes.length > 0">
 
@@ -215,6 +333,7 @@
                     <span class="item-name" [class.item-name-served]="(item.servedQuantity ?? 0) >= item.quantity">
                       {{ getProductName(item) }}
                     </span>
+                    <span *ngIf="roundWaiterLabel(round, order) as mozo" class="item-mozo-badge">👤 {{ mozo }}</span>
                     <span *ngIf="(item.servedQuantity ?? 0) > 0 && (item.servedQuantity ?? 0) < item.quantity"
                       class="item-partial-badge">
                       {{ item.servedQuantity }}/{{ item.quantity }} servidos
@@ -295,7 +414,4 @@
       </div>
 
     </div>
-    <div *ngIf="filteredOrders.length === 0" class="empty">Sin pedidos para mostrar</div>
-  </div>
-
-</div>
+</ng-template>

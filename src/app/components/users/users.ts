@@ -12,6 +12,7 @@ interface Waiter {
   gender: string;
   isActive: boolean;
   createdAt: string;
+  role: string;
 }
 
 interface WaiterForm {
@@ -20,6 +21,7 @@ interface WaiterForm {
   firstName: string;
   lastName: string;
   gender: string;
+  role: string;
 }
 
 @Component({
@@ -43,7 +45,7 @@ export class UsersComponent implements OnInit {
   savingForm = false;
 
   form: WaiterForm = {
-    username: '', password: '', firstName: '', lastName: '', gender: 'M'
+    username: '', password: '', firstName: '', lastName: '', gender: 'M', role: 'mozo'
   };
 
   get activeCount(): number {
@@ -69,7 +71,7 @@ export class UsersComponent implements OnInit {
   openCreate(): void {
     this.isEditing = false;
     this.editingId = null;
-    this.form = { username: '', password: '', firstName: '', lastName: '', gender: 'M' };
+    this.form = { username: '', password: '', firstName: '', lastName: '', gender: 'M', role: 'mozo' };
     this.error = '';
     this.showModal = true;
   }
@@ -77,7 +79,7 @@ export class UsersComponent implements OnInit {
   openEdit(w: Waiter): void {
     this.isEditing = true;
     this.editingId = w.id;
-    this.form = { username: w.username, password: '', firstName: w.firstName, lastName: w.lastName, gender: w.gender };
+    this.form = { username: w.username, password: '', firstName: w.firstName, lastName: w.lastName, gender: w.gender, role: w.role || 'mozo' };
     this.error = '';
     this.showModal = true;
   }
@@ -94,15 +96,17 @@ export class UsersComponent implements OnInit {
     this.savingForm = true;
     this.error = '';
 
+    const roleLabel = this.form.role === 'cantador' ? 'Cantador' : 'Mozo';
+
     if (this.isEditing && this.editingId) {
       const body = { ...this.form, isActive: true };
       this.http.put(`${this.API}/${this.editingId}`, body).subscribe({
-        next: () => { this.showSuccess('Mozo actualizado'); this.loadWaiters(); },
+        next: () => { this.showSuccess(`${roleLabel} actualizado`); this.loadWaiters(); },
         error: (e) => { this.error = e.error || 'Error al actualizar'; this.savingForm = false; }
       });
     } else {
       this.http.post<Waiter>(this.API, this.form).subscribe({
-        next: () => { this.showSuccess('Mozo creado'); this.loadWaiters(); },
+        next: () => { this.showSuccess(`${roleLabel} creado`); this.loadWaiters(); },
         error: (e) => { this.error = e.error || 'Error al crear'; this.savingForm = false; }
       });
     }
@@ -133,6 +137,8 @@ export class UsersComponent implements OnInit {
   getGenderIcon(gender: string): string { return gender === 'F' ? '👩' : '👨'; }
 
   getGenderLabel(gender: string): string { return gender === 'F' ? 'Moza' : 'Mozo'; }
+
+  getRoleLabel(role: string): string { return role === 'cantador' ? 'Cantador' : 'Mozo'; }
   formatDate(d: string): string {
     return new Date(d).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }

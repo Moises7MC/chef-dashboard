@@ -44,6 +44,7 @@
         <tr>
           <th>Mozo</th>
           <th>Usuario</th>
+          <th>Rol</th>
           <th>Género</th>
           <th>Estado</th>
           <th>Desde</th>
@@ -64,6 +65,13 @@
             </div>
           </td>
           <td><code class="username">{{ w.username }}</code></td>
+          <td>
+            <span class="badge"
+              [style.background]="w.role === 'cantador' ? '#ede9fe' : '#dbeafe'"
+              [style.color]="w.role === 'cantador' ? '#5b21b6' : '#1e40af'">
+              {{ getRoleLabel(w.role) }}
+            </span>
+          </td>
           <td>
             <span class="badge" [class.badge-f]="w.gender === 'F'">
               {{ w.gender === 'F' ? 'Femenino' : 'Masculino' }}
@@ -121,12 +129,27 @@
   <div class="modal" (click)="$event.stopPropagation()">
 
     <div class="modal-header">
-      <h3>{{ isEditing ? 'Editar Mozo' : 'Nuevo Mozo' }}</h3>
+      <h3>{{ isEditing ? 'Editar' : 'Nuevo' }} {{ getRoleLabel(form.role) }}</h3>
       <button class="modal-close" (click)="closeModal()">✕</button>
     </div>
 
     <div class="modal-body">
       <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+
+      <!-- Tipo de usuario -->
+      <div class="form-group">
+        <label>Tipo de usuario *</label>
+        <div class="gender-options">
+          <label class="gender-opt" [class.selected]="form.role === 'mozo'">
+            <input type="radio" [(ngModel)]="form.role" value="mozo" name="role" />
+            🧑‍🍳 Mozo
+          </label>
+          <label class="gender-opt" [class.selected]="form.role === 'cantador'">
+            <input type="radio" [(ngModel)]="form.role" value="cantador" name="role" />
+            🎤 Cantador
+          </label>
+        </div>
+      </div>
 
       <!-- Nombre y apellido -->
       <div class="form-row">
@@ -172,7 +195,7 @@
     <div class="modal-footer">
       <button class="btn-cancel" (click)="closeModal()">Cancelar</button>
       <button class="btn-save" (click)="saveWaiter()" [disabled]="savingForm">
-        <span *ngIf="!savingForm">{{ isEditing ? 'Guardar cambios' : 'Crear mozo' }}</span>
+        <span *ngIf="!savingForm">{{ isEditing ? 'Guardar cambios' : ('Crear ' + getRoleLabel(form.role).toLowerCase()) }}</span>
         <span *ngIf="savingForm" class="spinner-sm"></span>
       </button>
     </div>

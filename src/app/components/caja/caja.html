@@ -136,8 +136,11 @@
       <div class="order-card" *ngFor="let order of ordenesListas">
         <div class="order-card-header">
           <div>
-            <span class="order-table">Mesa {{ order.tableNumber }}</span>
-            <span class="order-comanda">Comanda {{ order.comanda }}</span>
+            <span class="order-table">Mesa {{ order.tableNumber }}{{ order.tableSuffix }}</span>
+            <span *ngIf="order.isParaLlevar" style="background-color: #ede9fe; color: #5b21b6; font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 9999px; border: 1px solid #a78bfa; font-weight: 600; margin-left: 6px;">
+              🛍 Para llevar
+            </span>
+            <!-- <span class="order-comanda">Comanda {{ order.comanda }}</span> -->
           </div>
           <span class="badge-ready">Listo</span>
         </div>
@@ -166,7 +169,7 @@
             <rect x="2" y="5" width="20" height="14" rx="2" />
             <path d="M2 10h20" />
           </svg>
-          Cobrar Mesa {{ order.tableNumber }}
+          Cobrar Mesa {{ order.tableNumber }}{{ order.tableSuffix }}{{ order.isParaLlevar ? ' (Para llevar)' : '' }}
         </button>
       </div>
     </div>
@@ -188,12 +191,12 @@
         </div>
         <div class="tx-info">
           <span class="tx-desc">
-            {{ t.tableNumber === 0 ? 'Para llevar' : (t.tableNumber ? 'Mesa ' + t.tableNumber : t.description) }}
+            {{ t.tableNumber === 0 ? 'Para llevar' : (t.tableNumber ? 'Mesa ' + t.tableNumber + (t.tableSuffix || '') + (t.isParaLlevar ? ' · Para llevar' : '') : t.description) }}
           </span>
           <span class="tx-meta">
             {{ formatTime(t.createdAt) }}
             <span *ngIf="t.paymentMethod" class="tx-method">• {{ t.paymentMethod }}</span>
-            <span *ngIf="t.tableNumber" class="tx-table">• Mesa {{ t.tableNumber }}</span>
+            <span *ngIf="t.tableNumber" class="tx-table">• Mesa {{ t.tableNumber }}{{ t.tableSuffix }}</span>
           </span>
         </div>
         <span class="tx-amount" [class.amount-income]="t.type === 'ingreso'"
@@ -249,7 +252,7 @@
 <div class="modal-overlay" *ngIf="showCobrarModal" (click)="showCobrarModal = false">
   <div class="modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>Cobrar Mesa {{ selectedOrder?.tableNumber }}</h2>
+      <h2>Cobrar Mesa {{ selectedOrder?.tableNumber }}{{ selectedOrder?.tableSuffix }}{{ selectedOrder?.isParaLlevar ? ' (Para llevar)' : '' }}</h2>
       <button class="modal-close" (click)="showCobrarModal = false">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 6L6 18M6 6l12 12" />

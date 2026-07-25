@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { OrderService, Order } from '../../services/order.service';
 import { AuthService } from '../../services/auth.service';
+import { SettingsService } from '../../services/settings.service';
 
 interface OrderGroup {
   tableNumber: number;
@@ -12,6 +13,7 @@ interface OrderGroup {
   updatedAt?: string;
   mealType?: string;
   waiterName?: string;
+  tableSuffix?: string | null;
 }
 
 @Component({
@@ -34,6 +36,28 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
   searchQuery: string = '';
   activeFilter: string = 'all';
 
+  // ✅ Pedidos resueltos (Cobrado/Cancelado) se agrupan aparte, en una lista
+  //    compacta y colapsable, para que no compitan visualmente con los
+  //    pedidos activos cuando hay muchas órdenes en el día.
+  finishedCollapsed = false;
+
+  // ✅ Umbrales de tiempo (antes hardcodeados) — ahora configurables desde
+  //    Menús → Tiempos y compartidos con el Cantador de la app.
+  warningMinutes = 8;
+  dangerMinutes = 15;
+
+  // ✅ Todas las filas (activas o resueltas) son compactas — el detalle
+  //    completo del pedido se ve en un modal, no desplegado en línea.
+  //    Guardamos solo la clave y recalculamos el grupo desde filteredOrders
+  //    para que el modal se mantenga actualizado si llega una actualización
+  //    (SignalR) mientras está abierto.
+  private selectedGroupKey: string | null = null;
+
+  get selectedGroup(): OrderGroup | null {
+    if (!this.selectedGroupKey) return null;
+    return this.filteredOrders.find(g => this.groupKey(g) === this.selectedGroupKey) ?? null;
+  }
+
   filterOptions = [
     { key: 'all', label: 'Todos' },
     { key: 'Enviado a cocina', label: 'Nuevo' },
@@ -42,6 +66,7 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     { key: 'Listo', label: 'Listo' },
     { key: 'Cobrado', label: 'Cobrado' },
     { key: 'Cancelado', label: 'Cancelado' },
+    { key: 'Eliminado', label: 'Eliminado' },
   ];
 
   private _timerInterval: any;
@@ -50,7 +75,8 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
   constructor(
     private orderService: OrderService,
     private auth: AuthService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private settingsService: SettingsService
   ) { }
 
   // ✅ Agrupar órdenes considerando tableNumber > 100 como "para llevar" (Caja)
@@ -58,9 +84,9 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     const grouped = new Map<string, any>();
 
     for (const order of orders) {
-      // ✅ Pedidos de Caja (tableNumber > 100) o para llevar (tableNumber === 0)
-      // cada uno es su propio grupo
-      const key = (order.tableNumber === 0 || order.tableNumber > 100)
+      // ✅ Pedidos de Caja (tableNumber > 100), para llevar (tableNumber === 0)
+      // o SEPARADOS (subpedidos independientes de la misma mesa) — cada uno es su propio grupo
+      const key = (order.tableNumber === 0 || order.tableNumber > 100 || order.isSeparado)
         ? `order-${order.id}`
         : `table-${order.tableNumber}`;
 
@@ -73,6 +99,7 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
           updatedAt: order.updatedAt,
           mealType: order.mealType,
           waiterName: order.waiterName,
+          tableSuffix: order.tableSuffix,
         });
       }
 
@@ -90,6 +117,12 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     this.orderService.orders$.subscribe(() => {
       this.applyFiltersLocal();
       this.cdr.detectChanges();
+    });
+
+    this.settingsService.timers$.subscribe(timers => {
+      this.warningMinutes = timers.warningMinutes;
+      this.dangerMinutes = timers.dangerMinutes;
+      this.applyFiltersLocal();
     });
 
     this._timerInterval = setInterval(() => {
@@ -119,8 +152,10 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
           const isActive = o.status === 'Enviado a cocina' || o.status === 'Pendiente';
           if (!isActive) return false;
           const mins = this.getElapsedSeconds(o.createdAt, o.status, o.updatedAt) / 60;
-          return mins >= 15;
+          return mins >= this.dangerMinutes;
         });
+      } else if (this.activeFilter === 'Eliminado') {
+        orders = orders.filter(o => o.isDeleted);
       } else {
         orders = orders.filter(o => o.status === this.activeFilter);
       }
@@ -141,6 +176,75 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     this.applyFiltersLocal();
   }
 
+  // ═══════════════════════════════════════════════════
+  // ✅ SEPARACIÓN VISUAL: activos (arriba, en grilla) vs.
+  //    resueltos (abajo, en lista compacta y colapsable)
+  // ═══════════════════════════════════════════════════
+
+  isFinished(group: OrderGroup): boolean {
+    return group.status === 'Cobrado' || group.status === 'Cancelado' || this.groupHasDeleted(group);
+  }
+
+  // ✅ Un grupo con algún pedido eliminado se manda a "Resueltos" — ya no es
+  //    trabajo pendiente para cocina, pero debe quedar visible (tachado) para
+  //    que el dueño pueda auditar qué se eliminó.
+  groupHasDeleted(group: OrderGroup): boolean {
+    return group.orders.some(o => o.isDeleted);
+  }
+
+  groupAllDeleted(group: OrderGroup): boolean {
+    return group.orders.length > 0 && group.orders.every(o => o.isDeleted);
+  }
+
+  private activePriority(group: OrderGroup): number {
+    if (group.status === 'Listo') return 3;
+    const mins = this.getElapsedSeconds(group.createdAt, group.status, group.updatedAt) / 60;
+    if (mins >= this.dangerMinutes) return 0; // Demorado — máxima prioridad visual
+    return group.status === 'Enviado a cocina' ? 1 : 2; // Nuevo antes que Preparando
+  }
+
+  get activeGroups(): OrderGroup[] {
+    return this.filteredOrders
+      .filter(g => !this.isFinished(g))
+      .sort((a, b) =>
+        this.activePriority(a) - this.activePriority(b) ||
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+  }
+
+  get finishedGroups(): OrderGroup[] {
+    return this.filteredOrders
+      .filter(g => this.isFinished(g))
+      .sort((a, b) =>
+        new Date(b.updatedAt || b.createdAt).getTime() -
+        new Date(a.updatedAt || a.createdAt).getTime()
+      );
+  }
+
+  groupTotal(group: OrderGroup): number {
+    return group.orders.reduce((sum, o) => sum + (o.total || 0), 0);
+  }
+
+  groupKey(group: OrderGroup): string {
+    return group.orders.map(o => o.id).join('-');
+  }
+
+  // ✅ Arrow function (no método de clase normal): Angular invoca el trackBy
+  //    como una referencia suelta (this.differ._trackByFn(index, item)), así
+  //    que un método normal pierde el "this" del componente. La arrow function
+  //    lo captura de forma léxica y evita el "this.groupKey is not a function".
+  trackByGroup = (index: number, group: OrderGroup): string => {
+    return this.groupKey(group);
+  };
+
+  openDetail(group: OrderGroup): void {
+    this.selectedGroupKey = this.groupKey(group);
+  }
+
+  closeDetail(): void {
+    this.selectedGroupKey = null;
+  }
+
   getCounts(key: string): number {
     if (key === 'all') return this.allOrders.length;
 
@@ -149,8 +253,12 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
         const isActive = o.status === 'Enviado a cocina' || o.status === 'Pendiente';
         if (!isActive) return false;
         const mins = this.getElapsedSeconds(o.createdAt, o.status, o.updatedAt) / 60;
-        return mins >= 15;
+        return mins >= this.dangerMinutes;
       }).length;
+    }
+
+    if (key === 'Eliminado') {
+      return this.allOrders.filter(o => o.isDeleted).length;
     }
 
     return this.allOrders.filter(o => o.status === key).length;
@@ -195,6 +303,35 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     return item?.product?.name || 'Producto';
   }
 
+  // ✅ Nombre de pila (sin apellido) para las etiquetas de "otro mozo"
+  firstName(fullName?: string | null): string {
+    return (fullName || '').trim().split(/\s+/)[0] || '';
+  }
+
+  private namesDiffer(a?: string | null, b?: string | null): boolean {
+    const normA = (a || '').trim().toLowerCase();
+    const normB = (b || '').trim().toLowerCase();
+    return normA.length > 0 && normA !== normB;
+  }
+
+  // Nombre a mostrar junto a un plato (segundo) de una ronda, solo si
+  // la ronda la mandó un mozo distinto al que creó el pedido.
+  roundWaiterLabel(round: any, order: Order): string | null {
+    if (!this.namesDiffer(round?.waiterName, order.waiterName)) return null;
+    return this.firstName(round.waiterName);
+  }
+
+  // Nombre a mostrar junto a una entrada marcada "(NUEVO)", basado en quién
+  // fue el último en tocar el pedido (las entradas no se rastrean por ronda).
+  entradaWaiterLabel(order: Order): string | null {
+    if (!this.namesDiffer(order.lastEditedByWaiter, order.waiterName)) return null;
+    return this.firstName(order.lastEditedByWaiter);
+  }
+
+  entradaIsNew(name: string): boolean {
+    return !!name && name.includes('(NUEVO)');
+  }
+
   getElapsedSeconds(createdAt: string, status?: string, updatedAt?: string): number {
     // Convertimos a milisegundos ignorando la zona horaria del navegador
     // Usamos el valor UTC para que sea consistente con C#
@@ -231,11 +368,11 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     if (status === 'Listo' || status === 'Cancelado') return 'timer-done';
     const mins = this.getElapsedSeconds(createdAt, status, updatedAt) / 60;
     if (isParaLlevar) {
-      if (mins < 15) return 'timer-green';
+      if (mins < this.dangerMinutes) return 'timer-green';
       return 'timer-red';
     }
-    if (mins < 8) return 'timer-green';
-    if (mins < 15) return 'timer-orange';
+    if (mins < this.warningMinutes) return 'timer-green';
+    if (mins < this.dangerMinutes) return 'timer-orange';
     return 'timer-red';
   }
 
@@ -251,6 +388,18 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     });
   }
 
+  deleteOrder(order: Order): void {
+    const label = (order.tableNumber === 0 || order.tableNumber > 100)
+      ? 'este pedido para llevar'
+      : `el pedido de la Mesa ${order.tableNumber}${order.tableSuffix || ''}`;
+
+    if (!confirm(`¿Eliminar ${label}? Esta acción no se puede deshacer.`)) return;
+
+    this.orderService.deleteOrder(order.id)
+      .then(() => this.applyFilters())
+      .catch(() => alert('Error al eliminar el pedido'));
+  }
+
   getCardTimeClass(createdAt: string, status: string, updatedAt?: string, tableNumber?: number, isParaLlevar?: boolean): string {
     if (status === 'Cobrado') return 'card-cobrado';
     if (status === 'Listo' || status === 'Cancelado') return '';
@@ -258,12 +407,12 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
     const mins = this.getElapsedSeconds(createdAt, status, updatedAt) / 60;
 
     if (tableNumber === 0 || tableNumber! > 100 || isParaLlevar) {
-      if (mins < 15) return 'card-time-purple';
+      if (mins < this.dangerMinutes) return 'card-time-purple';
       return 'card-time-red';
     }
 
-    if (mins < 8) return 'card-time-green';
-    if (mins < 15) return 'card-time-orange';
+    if (mins < this.warningMinutes) return 'card-time-green';
+    if (mins < this.dangerMinutes) return 'card-time-orange';
     return 'card-time-red';
   }
 
@@ -274,26 +423,26 @@ export class KitchenOrdersComponent implements OnInit, OnDestroy {
   getButtonClass(createdAt: string, status: string, updatedAt?: string, isParaLlevar?: boolean): string {
     const mins = this.getElapsedSeconds(createdAt, status, updatedAt) / 60;
     if (isParaLlevar) {
-      if (mins < 15) return 'btn-time-purple';
+      if (mins < this.dangerMinutes) return 'btn-time-purple';
       return 'btn-time-red';
     }
-    if (mins < 8) return 'btn-time-green';
-    if (mins < 15) return 'btn-time-orange';
+    if (mins < this.warningMinutes) return 'btn-time-green';
+    if (mins < this.dangerMinutes) return 'btn-time-orange';
     return 'btn-time-red';
   }
 
   getBadgeBackground(createdAt: string, status: string, updatedAt?: string, tableNumber?: number, isParaLlevar?: boolean): string {
     if (tableNumber === 0 || tableNumber! > 100 || isParaLlevar) {
       const mins = this.getElapsedSeconds(createdAt, status, updatedAt) / 60;
-      if (mins < 15) return '#8b5cf6';
+      if (mins < this.dangerMinutes) return '#8b5cf6';
       return '#ef4444';
     }
     if (status === 'Cobrado') return '#eab308';
     if (status === 'Listo') return '#10b981';
     if (status === 'Cancelado') return '#ef4444';
     const mins = this.getElapsedSeconds(createdAt, status, updatedAt) / 60;
-    if (mins < 8) return '#10b981';
-    if (mins < 15) return '#f59e0b';
+    if (mins < this.warningMinutes) return '#10b981';
+    if (mins < this.dangerMinutes) return '#f59e0b';
     return '#ef4444';
   }
 

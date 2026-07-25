@@ -17,6 +17,8 @@ interface OrdenLista {
   items: { productName: string; quantity: number; unitPrice: number }[];
   entradasAdicionales?: string | null;
   isParaLlevar?: boolean; // ✅ NUEVO
+  isSeparado?: boolean;
+  tableSuffix?: string | null;
 }
 
 interface Transaction {
@@ -25,6 +27,8 @@ interface Transaction {
   amount: number;
   description: string;
   tableNumber: number | null;
+  tableSuffix?: string | null;
+  isParaLlevar?: boolean;
   paymentMethod: string | null;
   createdAt: string;
   orderId: number | null;

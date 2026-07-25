@@ -22,6 +22,7 @@
   top: 0; left: 0; bottom: 0;
   z-index: 100;
   border-right: 1px solid #2a2a30;
+  box-shadow: 6px 0 24px rgba(0, 0, 0, 0.35), 2px 0 8px rgba(0, 0, 0, 0.25);
 }
 
 /* ── Brand ── */

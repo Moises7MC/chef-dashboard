@@ -997,4 +997,27 @@ select.form-input { cursor: pointer; }
   background: #fef3c7;
   border-color: #f59e0b;
 }
+
+/* ── TAB TIEMPOS ── */
+.timers-card {
+  background: #fff;
+  border: 1px solid #ebebeb;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 460px;
+}
+.timers-title { font-size: 16px; font-weight: 700; color: #111; margin-bottom: 6px; }
+.timers-subtitle { font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 20px; }
+
+.alert {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+.alert-success {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  color: #166534;
+}
 .destacar-star { font-size: 1.1rem; }

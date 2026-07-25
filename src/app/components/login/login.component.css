@@ -197,3 +197,80 @@ form {
   flex-direction: column;
   gap: 12px;
 }
+
+/* ── Link "Cambiar contraseña" ── */
+.link-forgot {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px;
+  text-align: center;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color .2s;
+}
+.link-forgot:hover { color: #f97316; }
+
+/* ── Modal cambiar contraseña ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 420px;
+  background: #1c1c1e;
+  border: 1px solid #333;
+  border-radius: 16px;
+  padding: 28px 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.4);
+}
+
+.modal-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-card-header h3 { color: #fff; font-size: 17px; font-weight: 700; }
+.modal-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background .2s;
+}
+.modal-close:hover { background: #2a2a2a; color: #fff; }
+
+.modal-hint {
+  font-size: 12.5px;
+  color: #888;
+  line-height: 1.5;
+  margin-top: -4px;
+}
+
+.success-box {
+  background: rgba(34,197,94,.12);
+  border: 1px solid rgba(34,197,94,.3);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #86efac;
+  text-align: center;
+}
